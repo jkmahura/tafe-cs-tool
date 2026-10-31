@@ -3184,8 +3184,20 @@ async function submitEntry(){
   // Pass _replaces so Google Sheet script marks old row IsFinal=FALSE before appending new row
   // Only send _replaces when it differs from id (genuine replacement of a different entry)
   var sendReplaces=replaces&&replaces!==id?{_replaces:replaces}:{};
+  var _gsPayload=JSON.stringify(Object.assign({action:'entry'},entry,{id:id},sendReplaces));
+  var _gsUrl=(GSURL||'').trim()+'?action=entry&payload='+encodeURIComponent(_gsPayload);
   postToGoogleSheet(Object.assign({},entry,{id:id},sendReplaces));
-  toast(editId?'✅ Entry corrected!':'✅ Submitted!');
+  // Show direct tap link alongside toast — user taps it to guarantee Sheet receipt
+  // (background send may fail on Android; this is a direct user-gesture navigation)
+  if(GSURL&&_gsUrl.length<7500){
+    var _msg=document.createElement('div');
+    _msg.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 14px;border-radius:10px;z-index:9998;font-size:13px;text-align:center;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,.4)';
+    _msg.innerHTML=(editId?'✅ Corrected!':'✅ Submitted!')+'<br><a href="'+_gsUrl+'" target="_blank" style="color:#fde68a;font-weight:700;text-decoration:none;font-size:14px;display:block;margin-top:6px">↗ Tap to confirm in Sheet</a><div style="font-size:11px;color:#aaa;margin-top:2px">Opens briefly, then close that tab</div>';
+    document.body.appendChild(_msg);
+    setTimeout(function(){try{if(_msg.parentNode)_msg.parentNode.removeChild(_msg);}catch(ex){}},12000);
+  }else{
+    toast(editId?'✅ Entry corrected!':'✅ Submitted!');
+  }
   document.getElementById('entry-ok').textContent=(editId?'✅ Corrected at ':'✅ Saved at ')+new Date().toLocaleTimeString();
   ['kpi-sl','kpi-ask-sl','kpi-fs','kpi-mj','kpi-rev','kpi-poil','kpi-pparts','kpi-poil2','kpi-pparts2','kpi-soil','kpi-sparts','kpi-ew','kpi-uc',
    'mp-req','mp-avail','mp-trained','mp-untrained','e-highlight','e-rem','e-act','e-nv'].forEach(function(fid){var el=document.getElementById(fid);if(el)el.value='';});
