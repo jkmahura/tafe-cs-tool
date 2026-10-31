@@ -5008,9 +5008,11 @@ function postToGoogleSheet(data){
     }catch(ex){}
   }
 
-  // SEND VIA THREE METHODS IN PARALLEL — GAS always 302-redirects, different browsers
-  // handle this differently, so we fire all three and whichever gets through wins.
-  // The next pullFromSheet() will confirm which entries actually landed.
+  // PRIMARY METHOD: hidden iframe form GET
+  // A form targeting a hidden iframe is a real browser navigation — follows GAS redirects
+  // natively on ALL browsers including Android Chrome. We use GET (not POST) so the payload
+  // is in the URL query string and survives GAS's redirect. This is fully automatic, no user
+  // gesture needed, no popup blocker applies to form submissions.
   var getUrl=url+'?action='+encodeURIComponent(action)+'&payload='+encodeURIComponent(payload);
   if(getUrl.length>=7500){
     console.log('GS: payload too large for GET ('+getUrl.length+' chars), using form POST only');
@@ -5018,32 +5020,28 @@ function postToGoogleSheet(data){
     return;
   }
 
-  // Method 1: fetch no-cors GET (fire-and-forget, works through GAS redirect on Android)
-  if(window.fetch){
-    fetch(getUrl,{method:'GET',mode:'no-cors'}).catch(function(){});
-  }
-
-  // Method 2: Script tag (browser fetches as script, follows redirects, no CORS gate)
-  (function(){
-    var sc=document.createElement('script');
-    sc.src=getUrl;
-    document.head.appendChild(sc);
-    setTimeout(function(){try{if(sc.parentNode)sc.parentNode.removeChild(sc);}catch(ex){}},6000);
-  })();
-
-  // Method 3: Hidden iframe GET (browser navigation — bypasses CORS entirely)
-  (function(){
-    var ifrId='gs_iframe_'+Date.now();
-    var ifr=document.createElement('iframe');
-    ifr.id=ifrId;
-    ifr.name=ifrId;
-    ifr.style.cssText='display:none;width:0;height:0;border:0;position:absolute;left:-9999px';
+  // Reuse a single persistent hidden iframe
+  var ifrId='gs_nav_frame';
+  var ifr=document.getElementById(ifrId);
+  if(!ifr){
+    ifr=document.createElement('iframe');
+    ifr.id=ifrId; ifr.name=ifrId;
+    ifr.style.cssText='display:none;width:0;height:0;border:0;position:absolute;left:-9999px;top:-9999px';
     document.body.appendChild(ifr);
-    ifr.src=getUrl;
-    setTimeout(function(){try{var el=document.getElementById(ifrId);if(el&&el.parentNode)el.parentNode.removeChild(el);}catch(ex){}},8000);
-  })();
-
-  console.log('GS: fired 3-method send for',data.id||action,getUrl.length,'chars');
+  }
+  // Form GET targeting the iframe — browser navigates the iframe to getUrl, following all redirects
+  var form=document.createElement('form');
+  form.method='GET'; form.action=url; form.target=ifrId; form.style.display='none';
+  // Add each query param as a hidden input (GET form encodes them into URL)
+  [['action',action],['payload',payload]].forEach(function(pair){
+    var inp=document.createElement('input');
+    inp.type='hidden'; inp.name=pair[0]; inp.value=pair[1];
+    form.appendChild(inp);
+  });
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(function(){try{if(form.parentNode)form.parentNode.removeChild(form);}catch(ex){}},3000);
+  console.log('GS: iframe-form GET sent for',data.id||action);
 }
 
 function getPendingEntries(){
