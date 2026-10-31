@@ -5078,15 +5078,28 @@ function forceResendPending(){
   try{
     var toSend=getPendingEntries();
     if(!toSend.length){toast('No pending local entries to resend');return;}
+    var url=(GSURL||'').trim();
     toast('📤 Resending '+toSend.length+' entries…');
+    // Open each as a real browser tab — this is a true navigation, bypasses all CORS/redirect
+    // issues that block fetch/script-tag/iframe on Android Chrome with GAS.
+    // Tabs open briefly, GAS doGet receives params and writes to Sheet, then tab closes.
     toSend.forEach(function(e,i){
       setTimeout(function(){
-        postToGoogleSheet(Object.assign({},e,{action:'entry'}));
-      },i*500);
+        var payload=JSON.stringify(Object.assign({action:'entry'},e));
+        var getUrl=url+'?action=entry&payload='+encodeURIComponent(payload);
+        if(getUrl.length<7500){
+          var w=window.open(getUrl,'_blank');
+          // Also fire background methods in case popup is blocked
+          postToGoogleSheet(Object.assign({},e,{action:'entry'}));
+          if(w){setTimeout(function(){try{w.close();}catch(ex){}},4000);}
+        }else{
+          postToGoogleSheet(Object.assign({},e,{action:'entry'}));
+        }
+      },i*1200);
     });
     setTimeout(function(){
       toast('✅ Sent '+toSend.length+' entries — tap Refresh from Sheet to confirm they landed');
-    },toSend.length*500+1000);
+    },toSend.length*1200+1500);
   }catch(ex){toast('Error: '+ex.message);}
 }
 function gsFormPost(url,payload){
