@@ -5079,27 +5079,32 @@ function forceResendPending(){
     var toSend=getPendingEntries();
     if(!toSend.length){toast('No pending local entries to resend');return;}
     var url=(GSURL||'').trim();
-    toast('📤 Resending '+toSend.length+' entries…');
-    // Open each as a real browser tab — this is a true navigation, bypasses all CORS/redirect
-    // issues that block fetch/script-tag/iframe on Android Chrome with GAS.
-    // Tabs open briefly, GAS doGet receives params and writes to Sheet, then tab closes.
+    // Show a modal with one link per entry — user taps each link directly.
+    // window.open() inside setTimeout is blocked by Android popup blocker,
+    // but a direct <a target="_blank"> tap IS a user gesture and always works.
+    var modal=document.getElementById('resend-modal');
+    if(modal){modal.parentNode.removeChild(modal);}
+    modal=document.createElement('div');
+    modal.id='resend-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    var box=document.createElement('div');
+    box.style.cssText='background:#fff;border-radius:12px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto';
+    var html='<div style="font-weight:700;font-size:15px;margin-bottom:4px">📤 Send '+toSend.length+' Pending Entries</div>';
+    html+='<div style="font-size:12px;color:#555;margin-bottom:12px">Tap each link → it opens briefly → close that tab → come back here → tap next</div>';
     toSend.forEach(function(e,i){
-      setTimeout(function(){
-        var payload=JSON.stringify(Object.assign({action:'entry'},e));
-        var getUrl=url+'?action=entry&payload='+encodeURIComponent(payload);
-        if(getUrl.length<7500){
-          var w=window.open(getUrl,'_blank');
-          // Also fire background methods in case popup is blocked
-          postToGoogleSheet(Object.assign({},e,{action:'entry'}));
-          if(w){setTimeout(function(){try{w.close();}catch(ex){}},4000);}
-        }else{
-          postToGoogleSheet(Object.assign({},e,{action:'entry'}));
-        }
-      },i*1200);
+      var payload=JSON.stringify(Object.assign({action:'entry'},e));
+      var getUrl=url+'?action=entry&payload='+encodeURIComponent(payload);
+      var label=(e.outletName||e.outletId||'Entry '+(i+1))+' · '+(e.date||'');
+      html+='<a id="rslink_'+i+'" href="'+getUrl+'" target="_blank" style="display:block;margin:6px 0;padding:10px 12px;background:#fef9c3;border:1px solid #fcd34d;border-radius:8px;color:#854d0e;font-size:13px;text-decoration:none;font-weight:600">'+
+        '↗ '+(i+1)+'. '+label+'</a>';
     });
-    setTimeout(function(){
-      toast('✅ Sent '+toSend.length+' entries — tap Refresh from Sheet to confirm they landed');
-    },toSend.length*1200+1500);
+    html+='<div style="margin-top:14px;display:flex;gap:8px">';
+    html+='<button onclick="document.getElementById(\'resend-modal\').remove();checkPendingResend();" style="flex:1;padding:10px;background:#e5e7eb;border:none;border-radius:8px;font-size:13px;cursor:pointer">Close</button>';
+    html+='<button onclick="pullFromSheet();document.getElementById(\'resend-modal\').remove();" style="flex:1;padding:10px;background:#1F3864;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">🔄 Refresh from Sheet</button>';
+    html+='</div>';
+    box.innerHTML=html;
+    modal.appendChild(box);
+    document.body.appendChild(modal);
   }catch(ex){toast('Error: '+ex.message);}
 }
 function gsFormPost(url,payload){
