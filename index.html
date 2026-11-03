@@ -1044,6 +1044,7 @@ tr:last-child td{border-bottom:none}
     <button class="tab on" onclick="zmTab('tgt',this)">✏ Edit Targets</button>
     <button class="tab" onclick="zmTab('hist',this)">📅 Historical Push</button>
     <button class="tab" onclick="zmTab('fin',this)">🔒 Finalize Month</button>
+    <button class="tab" onclick="zmTab('anal',this);renderAnalytics()">📈 Analytics</button>
   </div>
   <div id="zm-tgt">
     <div class="card"><div class="ch or">Edit Targets (ZM — any time)</div><div class="cb">
@@ -1147,6 +1148,59 @@ tr:last-child td{border-bottom:none}
       </div>
     </div></div>
   </div>
+
+  <!-- ANALYTICS PANEL -->
+  <div id="zm-anal" class="hide">
+    <div class="card">
+      <div class="ch or">📈 Analytics — Zone Performance Trends</div>
+      <div class="cb">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <select id="an-metric" onchange="renderAnalytics()" style="padding:6px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+            <option value="sl">Service Load (SL)</option>
+            <option value="fs">Free Service (FS)</option>
+            <option value="mj">Major Jobs (MJ)</option>
+            <option value="rev">Revenue (₹L)</option>
+            <option value="ew">Extended Warranty (EW)</option>
+          </select>
+          <select id="an-view" onchange="renderAnalytics()" style="padding:6px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+            <option value="zone">Zone Total</option>
+            <option value="state">By State</option>
+            <option value="se">By SE</option>
+          </select>
+        </div>
+        <div id="an-chart-wrap" style="overflow-x:auto">
+          <canvas id="an-chart" style="max-height:320px"></canvas>
+        </div>
+        <div id="an-summary" style="margin-top:12px;font-size:12px;color:#555"></div>
+      </div>
+    </div>
+
+    <!-- Achievement % table -->
+    <div class="card">
+      <div class="ch or">🏆 Month-wise Achievement % — State View</div>
+      <div class="cb">
+        <div style="overflow-x:auto"><table id="an-ach-table" style="width:100%;border-collapse:collapse;font-size:12px"></table></div>
+      </div>
+    </div>
+
+    <!-- SE Ranking -->
+    <div class="card">
+      <div class="ch or">👤 SE Performance Ranking — Current Month</div>
+      <div class="cb">
+        <div id="an-se-rank" style="font-size:12px"></div>
+      </div>
+    </div>
+
+    <!-- Hierarchy change log -->
+    <div class="card">
+      <div class="ch or">🔄 Hierarchy Change Log</div>
+      <div class="cb" style="font-size:12px">
+        <div id="an-hier-log">Loading…</div>
+        <button class="btn bsm" style="margin-top:8px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1" onclick="renderHierLog()">🔄 Refresh Log</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- PROFILE -->
@@ -4697,11 +4751,215 @@ function renderSLROP(){
   document.getElementById('slrop-tbody').innerHTML=tb||'<tr><td colspan="40" style="text-align:center;color:var(--sub);padding:20px">No data. Enter plans and submit daily entries.</td></tr>';
 }
 
+// -- ANALYTICS --------------------------------------------
+var _anChartInst=null;
+function renderAnalytics(){
+  if(!entries||!entries.length){document.getElementById('an-summary').textContent='No data yet — pull from Sheet first.';return;}
+  var metric=document.getElementById('an-metric')?document.getElementById('an-metric').value:'sl';
+  var view=document.getElementById('an-view')?document.getElementById('an-view').value:'zone';
+  var MONTHS=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  var YEAR=2026;
+
+  // Gather actuals by month (from entries)
+  var byMonth={};
+  MONTHS.forEach(function(mo){byMonth[mo]={};});
+  entries.forEach(function(e){
+    var mo=e.month||'';if(!byMonth[mo])return;
+    var val=parseFloat(e.kpi&&e.kpi[metric]||e[metric]||0)||0;
+    if(view==='zone'){
+      byMonth[mo]['Zone']=(byMonth[mo]['Zone']||0)+val;
+    }else if(view==='state'){
+      var st=e.state||e.outletState||'Unknown';
+      byMonth[mo][st]=(byMonth[mo][st]||0)+val;
+    }else{
+      var se=e.se||e.byName||e.by||'Unknown';
+      byMonth[mo][se]=(byMonth[mo][se]||0)+val;
+    }
+  });
+
+  // Targets by month
+  var tgtByMonth={};
+  MONTHS.forEach(function(mo){tgtByMonth[mo]=0;});
+  (MASTER_TARGETS||[]).forEach(function(t){
+    if(t.level==='dealer'&&t.month&&tgtByMonth[t.month]!==undefined){
+      tgtByMonth[t.month]+=(parseFloat(t[metric])||0);
+    }
+  });
+
+  // Which months have data
+  var activeMos=MONTHS.filter(function(mo){
+    return Object.keys(byMonth[mo]).some(function(k){return byMonth[mo][k]>0;});
+  });
+  if(!activeMos.length){document.getElementById('an-summary').textContent='No entry data found. Submit entries or push historical data first.';return;}
+
+  // Build chart datasets
+  var colors=['#1F3864','#C55A11','#1a7f37','#7030A0','#0070C0','#FF0000','#00B0F0','#FFC000','#92D050','#FF7C80'];
+  var seriesKeys=[];
+  activeMos.forEach(function(mo){Object.keys(byMonth[mo]).forEach(function(k){if(seriesKeys.indexOf(k)<0)seriesKeys.push(k);});});
+  seriesKeys.sort();
+
+  var datasets=seriesKeys.map(function(key,i){
+    return {
+      label:key,
+      data:activeMos.map(function(mo){return Math.round((byMonth[mo][key]||0)*10)/10;}),
+      backgroundColor:colors[i%colors.length]+'33',
+      borderColor:colors[i%colors.length],
+      borderWidth:2,
+      tension:0.3,
+      fill:false,
+      pointRadius:4
+    };
+  });
+
+  // Add target line (zone only)
+  if(view==='zone'){
+    datasets.push({
+      label:'Target',
+      data:activeMos.map(function(mo){return Math.round(tgtByMonth[mo]*10)/10;}),
+      borderColor:'#CC0000',borderWidth:2,borderDash:[6,3],
+      backgroundColor:'transparent',fill:false,pointRadius:3,tension:0.3,
+      borderDashOffset:0
+    });
+  }
+
+  // Render chart using Chart.js CDN (load dynamically if not loaded)
+  function drawChart(){
+    var canvas=document.getElementById('an-chart');
+    if(!canvas)return;
+    if(_anChartInst){try{_anChartInst.destroy();}catch(ex){}}
+    _anChartInst=new Chart(canvas,{
+      type: seriesKeys.length<=2?'bar':'line',
+      data:{labels:activeMos, datasets:datasets},
+      options:{
+        responsive:true,
+        plugins:{legend:{position:'bottom',labels:{font:{size:11}}},
+          title:{display:true,text:metric.toUpperCase()+' Trend — '+
+            (view==='zone'?'Zone Total':view==='state'?'By State':'By SE'),font:{size:13}}},
+        scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},
+                x:{ticks:{font:{size:10}}}}
+      }
+    });
+  }
+
+  if(typeof Chart==='undefined'){
+    var sc=document.createElement('script');
+    sc.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    sc.onload=drawChart;
+    document.head.appendChild(sc);
+  }else{drawChart();}
+
+  // Achievement % table
+  var tbl=document.getElementById('an-ach-table');
+  if(tbl){
+    var states=['West Bengal','Bihar','Jharkhand','Odisha','Assam','Manipur'];
+    var tgtByState={};
+    (MASTER_TARGETS||[]).forEach(function(t){
+      if(t.level==='dealer'&&t.month){
+        var k=(t.state||'')+'_'+(t.month||'');
+        tgtByState[k]=(tgtByState[k]||0)+(parseFloat(t.sl)||0);
+      }
+    });
+    var actByState={};
+    entries.forEach(function(e){
+      var k=(e.state||e.outletState||'')+'_'+(e.month||'');
+      actByState[k]=(actByState[k]||0)+(parseFloat(e.kpi&&e.kpi.sl||e.sl||0)||0);
+    });
+
+    var html='<tr style="background:#1F3864;color:#fff"><th style="padding:6px 8px;text-align:left">State</th>';
+    activeMos.forEach(function(mo){html+='<th style="padding:6px 8px;text-align:center">'+mo+'</th>';});
+    html+='</tr>';
+    states.forEach(function(st,si){
+      html+='<tr style="background:'+(si%2?'#f8f9fa':'#fff')+'">';
+      html+='<td style="padding:5px 8px;font-weight:600;border-right:1px solid #dee2e6">'+st+'</td>';
+      activeMos.forEach(function(mo){
+        var tgt=tgtByState[st+'_'+mo]||0;
+        var act=actByState[st+'_'+mo]||0;
+        var pct=tgt>0?Math.round(act/tgt*100):null;
+        var col=pct===null?'#aaa':pct>=100?'#166534':pct>=70?'#92400e':'#991b1b';
+        html+='<td style="padding:5px 8px;text-align:center;color:'+col+';font-weight:700">'+(pct===null?'—':pct+'%')+'</td>';
+      });
+      html+='</tr>';
+    });
+    tbl.innerHTML=html;
+  }
+
+  // SE ranking — current month
+  var curMo=activeMos[activeMos.length-1];
+  var seRanks={};
+  entries.filter(function(e){return e.month===curMo;}).forEach(function(e){
+    var se=e.se||e.byName||e.by||'?';
+    if(!seRanks[se])seRanks[se]={sl:0,fs:0,mj:0,outlets:new Set()};
+    seRanks[se].sl+=(parseFloat(e.kpi&&e.kpi.sl||e.sl||0)||0);
+    seRanks[se].fs+=(parseFloat(e.kpi&&e.kpi.fs||e.fs||0)||0);
+    seRanks[se].mj+=(parseFloat(e.kpi&&e.kpi.mj||e.mj||0)||0);
+    seRanks[se].outlets.add(e.outletId||e.outletid||e.outletName||'x');
+  });
+  var seList=Object.keys(seRanks).sort(function(a,b){return seRanks[b].sl-seRanks[a].sl;});
+  var rankDiv=document.getElementById('an-se-rank');
+  if(rankDiv){
+    var rhtml='<div style="font-weight:700;margin-bottom:6px;color:#1F3864">'+curMo+' '+YEAR+' — Ranked by SL</div>';
+    rhtml+='<table style="width:100%;border-collapse:collapse">';
+    rhtml+='<tr style="background:#1F3864;color:#fff"><th style="padding:5px 8px;text-align:left">#</th><th style="padding:5px 8px;text-align:left">SE</th><th style="padding:5px 8px;text-align:center">Outlets</th><th style="padding:5px 8px;text-align:center">SL</th><th style="padding:5px 8px;text-align:center">FS</th><th style="padding:5px 8px;text-align:center">MJ</th></tr>';
+    seList.forEach(function(se,i){
+      var r=seRanks[se];
+      var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+      rhtml+='<tr style="background:'+(i%2?'#f8f9fa':'#fff')+'"><td style="padding:5px 8px;font-weight:700">'+(i+1)+'</td>'+
+        '<td style="padding:5px 8px">'+medal+' '+se+'</td>'+
+        '<td style="padding:5px 8px;text-align:center">'+r.outlets.size+'</td>'+
+        '<td style="padding:5px 8px;text-align:center;font-weight:700">'+r.sl+'</td>'+
+        '<td style="padding:5px 8px;text-align:center">'+r.fs+'</td>'+
+        '<td style="padding:5px 8px;text-align:center">'+r.mj+'</td></tr>';
+    });
+    rhtml+='</table>';
+    rankDiv.innerHTML=rhtml;
+  }
+
+  var totAct=seList.reduce(function(s,se){return s+seRanks[se].sl;},0);
+  document.getElementById('an-summary').innerHTML=
+    '<b>'+curMo+' Zone Total:</b> SL '+totAct+
+    (tgtByMonth[curMo]?' / Target '+Math.round(tgtByMonth[curMo])+
+    ' = <b style="color:'+(totAct/tgtByMonth[curMo]>=1?'#166534':'#991b1b')+'">'+
+    Math.round(totAct/tgtByMonth[curMo]*100)+'%</b>':'');
+
+  renderHierLog();
+}
+
+function renderHierLog(){
+  var logDiv=document.getElementById('an-hier-log');
+  if(!logDiv)return;
+  var log=[];
+  try{log=JSON.parse(localStorage.getItem('hier_change_log')||'[]');}catch(ex){}
+  if(!log.length){
+    logDiv.innerHTML='<span style="color:#aaa">No changes logged yet. Changes made via Hierarchy settings will appear here.</span>';
+    return;
+  }
+  var html='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html+='<tr style="background:#1F3864;color:#fff"><th style="padding:4px 6px">Date</th><th style="padding:4px 6px">Change</th><th style="padding:4px 6px">By</th></tr>';
+  log.slice().reverse().forEach(function(l,i){
+    html+='<tr style="background:'+(i%2?'#f8f9fa':'#fff')+'">'+
+      '<td style="padding:4px 6px;white-space:nowrap">'+new Date(l.at).toLocaleDateString('en-IN')+'</td>'+
+      '<td style="padding:4px 6px">'+l.desc+'</td>'+
+      '<td style="padding:4px 6px">'+l.by+'</td></tr>';
+  });
+  html+='</table>';
+  logDiv.innerHTML=html;
+}
+
+// Hook: log hierarchy changes when saving
+function logHierChange(desc){
+  try{
+    var log=JSON.parse(localStorage.getItem('hier_change_log')||'[]');
+    log.push({at:Date.now(),desc:desc,by:CU&&CU.name||'ZM'});
+    if(log.length>200)log=log.slice(-200);
+    localStorage.setItem('hier_change_log',JSON.stringify(log));
+  }catch(ex){}
+}
+
 // -- ZM TOOLS ---------------------------------------------
 function zmTab(tab,btn){
   document.querySelectorAll('#zm-tabs .tab').forEach(function(b){b.classList.remove('on');});
   if(btn)btn.classList.add('on');
-  ['tgt','hist','fin'].forEach(function(t){var el=document.getElementById('zm-'+t);if(el)el.classList.toggle('hide',t!==tab);});
+  ['tgt','hist','fin','anal'].forEach(function(t){var el=document.getElementById('zm-'+t);if(el)el.classList.toggle('hide',t!==tab);});
 }
 function populateHPOutlet(){var sel=document.getElementById('hp-outlet');sel.innerHTML='<option value="">- Select -</option>';dealers.forEach(function(d){var o=document.createElement('option');o.value=d.id;o.textContent=(d.isKPD?'🏭 ':d.isDirect?'⭐ ':d.isASK?'🔧 ':'🏪 ')+d.name+' ('+d.code+')';sel.appendChild(o);});}
 function populateFNOutlet(){var sel=document.getElementById('fn-outlet');sel.innerHTML='<option value="">- Select -</option>';dealers.filter(function(d){return !d.isASK;}).forEach(function(d){var o=document.createElement('option');o.value=d.id;o.textContent=(d.isKPD?'🏭 ':d.isDirect?'⭐ ':'🏪 ')+d.name+' ('+d.code+')';sel.appendChild(o);});}
