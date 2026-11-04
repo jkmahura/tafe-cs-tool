@@ -1256,15 +1256,15 @@ tr:last-child td{border-bottom:none}
           <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">Revenue (₹L)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD Rev ÷ SE's Rev Target) × 10</td></tr>
           <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">Secondary Offtake<br><span style="font-size:10px;color:#6b7280">(S.Oil + S.Parts ₹L)</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(MTD Sec.Off ÷ SE's Sec Target) × 25</td></tr>
           <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">EW (Extended Warranty)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">20 pts</td><td style="padding:6px 8px;color:#374151">(MTD EW ÷ SE's EW Target) × 20</td></tr>
-          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">🔥 HP (Hot Prospect)<br><span style="font-size:10px;color:#6b7280">No monthly target</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(SE's HP ÷ Highest HP in zone) × 10</td></tr>
-          <tr style="background:#fafafa"><td style="padding:6px 8px">🎪 FA (Field Activity)<br><span style="font-size:10px;color:#6b7280">No monthly target</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(SE's FA ÷ Highest FA in zone) × 25</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">🔥 HP (Hot Prospect)<br><span style="font-size:10px;color:#16a34a">Target provided in sheet</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD HP ÷ SE's HP Target) × 10<br><span style="font-size:10px;color:#6b7280">Falls back to relative if no target in sheet</span></td></tr>
+          <tr style="background:#fafafa"><td style="padding:6px 8px">🎪 FA (Field Activity)<br><span style="font-size:10px;color:#16a34a">Target provided in sheet</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(MTD FA ÷ SE's FA Target) × 25<br><span style="font-size:10px;color:#6b7280">Falls back to relative if no target in sheet</span></td></tr>
         </tbody>
       </table>
       <div style="margin-top:12px;padding:10px 12px;background:#fef3c7;border-radius:8px;border-left:3px solid #d97706;font-size:12px;color:#92400e">
         <strong>Key rules:</strong><br>
         • SE's target = sum of dealer-level targets for all dealers assigned to that SE<br>
         • Score can exceed the weight if SE beats the target (e.g. 110% achievement = 11 pts on a 10-pt param)<br>
-        • HP &amp; FA have no targets — always ranked relative to the zone's best performer<br>
+        • HP &amp; FA use target-based scoring when targets are in the month's sheet; relative (÷ zone best) otherwise<br>
         • Score is live (MTD) — refreshes every time you sync from the Google Sheet
       </div>
     </div>
@@ -5066,8 +5066,9 @@ function _seCompGetData(mon,yr){
   seList.sort();
 
   // Build SE → target totals (from MASTER_TARGETS, summed across dealer-level targets for this SE)
+  // hp and fa targets are optional — present in Nov 2026+ target sheets; absent = relative scoring used
   var seTgt={};
-  seList.forEach(function(se){seTgt[se]={sl:0,rev:0,sec:0,ew:0};});
+  seList.forEach(function(se){seTgt[se]={sl:0,rev:0,sec:0,ew:0,hp:0,fa:0,hasHPTgt:false,hasFATgt:false};});
   dealers.forEach(function(d){
     var se=d.se;if(!se||!seTgt[se])return;
     var t=getTarget('dealer',d.id,mon,yr)||getTarget('dealer',d.code,mon,yr)||{};
@@ -5075,6 +5076,9 @@ function _seCompGetData(mon,yr){
     seTgt[se].rev+=(parseFloat(t.rev)||0);
     seTgt[se].sec+=(parseFloat(t.soil)||0)+(parseFloat(t.sparts)||0);
     seTgt[se].ew+=(parseFloat(t.ew)||0);
+    // HP and FA targets — present only when provided in that month's target sheet
+    if(t.hp!=null&&t.hp!==undefined){seTgt[se].hp+=(parseFloat(t.hp)||0);seTgt[se].hasHPTgt=true;}
+    if(t.fa!=null&&t.fa!==undefined){seTgt[se].fa+=(parseFloat(t.fa)||0);seTgt[se].hasFATgt=true;}
   });
 
   // Build SE → actuals (MTD from entries for this month)
@@ -5091,38 +5095,44 @@ function _seCompGetData(mon,yr){
     a.visits++;
   });
 
-  // For HP and FA: relative scoring vs zone best
+  // Zone-best for HP and FA (used as fallback when no targets exist for the month)
   var maxHP=0,maxFA=0;
   seList.forEach(function(se){maxHP=Math.max(maxHP,seAct[se].hp);maxFA=Math.max(maxFA,seAct[se].fa);});
+  // Check if ANY SE has HP/FA targets this month
+  var hpHasTgt=seList.some(function(se){return seTgt[se].hasHPTgt;});
+  var faHasTgt=seList.some(function(se){return seTgt[se].hasFATgt;});
 
   // Score each SE
   return seList.map(function(se){
     var a=seAct[se],t=seTgt[se];
     var sec=(a.soil||0)+(a.sparts||0);
 
+    // Target-based scoring: (actual/target) × weight, capped at 2× weight
     function tgtScore(act,tgt,w){
-      if(tgt>0)return Math.min(w*2, w*(act/tgt)); // target-based, capped at 2×
-      return 0; // no target = 0 for target params
+      if(tgt>0)return Math.min(w*2, w*(act/tgt));
+      return 0;
     }
     var slS=tgtScore(a.sl,t.sl,SE_COMP_W.sl);
     var revS=tgtScore(a.rev,t.rev,SE_COMP_W.rev);
     var secS=tgtScore(sec,t.sec,SE_COMP_W.sec);
     var ewS=tgtScore(a.ew,t.ew,SE_COMP_W.ew);
-    var hpS=maxHP>0?SE_COMP_W.hp*(a.hp/maxHP):0;  // relative
-    var faS=maxFA>0?SE_COMP_W.fa*(a.fa/maxFA):0;  // relative
+    // HP: use target-based if targets exist for this month, else relative to zone best
+    var hpS=hpHasTgt?tgtScore(a.hp,t.hp,SE_COMP_W.hp):(maxHP>0?SE_COMP_W.hp*(a.hp/maxHP):0);
+    // FA: use target-based if targets exist for this month, else relative to zone best
+    var faS=faHasTgt?tgtScore(a.fa,t.fa,SE_COMP_W.fa):(maxFA>0?SE_COMP_W.fa*(a.fa/maxFA):0);
 
-    // Achievement % for display
-    function pct(act,tgt){return tgt>0?Math.round(act/tgt*100):null;}
+    // Achievement % for display (null = no target → show relative rank instead)
+    function pct(act,tgt,hasTgt){return hasTgt&&tgt>0?Math.round(act/tgt*100):null;}
 
     return{
       name:se,
       score:Math.round((slS+revS+secS+ewS+hpS+faS)*10)/10,
-      sl:a.sl,slT:t.sl,slPct:pct(a.sl,t.sl),slS:Math.round(slS*10)/10,
-      rev:a.rev,revT:t.rev,revPct:pct(a.rev,t.rev),revS:Math.round(revS*10)/10,
-      sec:sec,secT:t.sec,secPct:pct(sec,t.sec),secS:Math.round(secS*10)/10,
-      ew:a.ew,ewT:t.ew,ewPct:pct(a.ew,t.ew),ewS:Math.round(ewS*10)/10,
-      hp:a.hp,hpS:Math.round(hpS*10)/10,
-      fa:a.fa,faS:Math.round(faS*10)/10,
+      sl:a.sl,slT:t.sl,slPct:pct(a.sl,t.sl,true),slS:Math.round(slS*10)/10,
+      rev:a.rev,revT:t.rev,revPct:pct(a.rev,t.rev,true),revS:Math.round(revS*10)/10,
+      sec:sec,secT:t.sec,secPct:pct(sec,t.sec,true),secS:Math.round(secS*10)/10,
+      ew:a.ew,ewT:t.ew,ewPct:pct(a.ew,t.ew,true),ewS:Math.round(ewS*10)/10,
+      hp:a.hp,hpT:t.hp,hpPct:pct(a.hp,t.hp,hpHasTgt),hpS:Math.round(hpS*10)/10,hpHasTgt:hpHasTgt,
+      fa:a.fa,faT:t.fa,faPct:pct(a.fa,t.fa,faHasTgt),faS:Math.round(faS*10)/10,faHasTgt:faHasTgt,
       visits:a.visits
     };
   }).filter(function(r){return r.visits>0||r.sl>0||r.hp>0||r.fa>0;})
@@ -5159,8 +5169,8 @@ function renderSECompetition(mon,yr){
       '<td style="padding:7px 6px;text-align:center;font-size:11px">'+pBadge(r.revPct,r.revS)+'</td>'+
       '<td style="padding:7px 6px;text-align:center;font-size:11px">'+pBadge(r.secPct,r.secS)+'</td>'+
       '<td style="padding:7px 6px;text-align:center;font-size:11px">'+pBadge(r.ewPct,r.ewS)+'</td>'+
-      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+relBadge(r.hp,r.hpS)+'</td>'+
-      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+relBadge(r.fa,r.faS)+'</td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+(r.hpHasTgt?pBadge(r.hpPct,r.hpS):relBadge(r.hp,r.hpS))+'</td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+(r.faHasTgt?pBadge(r.faPct,r.faS):relBadge(r.fa,r.faS))+'</td>'+
       '</tr>';
   }).join('');
 
@@ -5178,8 +5188,8 @@ function renderSECompetition(mon,yr){
     '<th style="padding:6px 6px;text-align:center">🎪FA<br><span style="opacity:.7">25pt</span></th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div style="margin-top:8px;font-size:10px;color:#9ca3af;line-height:1.6">'+
-    '• SL / Rev / Sec.Offtake / EW: score = (MTD actual ÷ monthly target) × weight — capped at 2× if no target set<br>'+
-    '• HP / FA: no monthly target — score = (SE count ÷ zone best) × weight (relative)<br>'+
+    '• SL / Rev / Sec.Offtake / EW: score = (MTD actual ÷ monthly target) × weight — capped at 2× weight max<br>'+
+    '• HP / FA: target-based when targets provided in sheet; else relative to zone best performer<br>'+
     '• Max score = 100 (all 6 KPIs at 100% of target). Can exceed 100 if target is beaten.</div>';
 }
 
