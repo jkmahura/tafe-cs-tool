@@ -1088,7 +1088,7 @@ tr:last-child td{border-bottom:none}
     <button class="tab on" onclick="zmTab('tgt',this)">✏ Edit Targets</button>
     <button class="tab" onclick="zmTab('hist',this)">📅 Historical Push</button>
     <button class="tab" onclick="zmTab('fin',this)">🔒 Finalize Month</button>
-    <button class="tab" onclick="zmTab('anal',this);renderAnalytics()">📈 Analytics</button>
+    <button class="tab" onclick="zmTab('anal',this);renderAnalytics();initSEInspector()">📈 Analytics</button>
   </div>
   <div id="zm-tgt">
     <div class="card"><div class="ch or">Edit Targets (ZM — any time)</div><div class="cb">
@@ -1247,6 +1247,18 @@ tr:last-child td{border-bottom:none}
           <span style="font-size:11px;color:#6b7280">MTD achievement-based scores</span>
         </div>
         <div id="an-comp-body" style="font-size:12px"></div>
+      </div>
+    </div>
+
+    <!-- SE Entry Inspector -->
+    <div class="card">
+      <div class="ch or">🔍 SE Entry Inspector (ZM Debug)</div>
+      <div class="cb" style="font-size:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <select id="insp-se" style="padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;flex:1;min-width:150px"><option value="">— Select SE —</option></select>
+          <button class="btn bsm" style="background:#1F3864;color:#fff" onclick="renderSEInspector()">🔍 Inspect</button>
+        </div>
+        <div id="insp-result"></div>
       </div>
     </div>
 
@@ -5224,6 +5236,52 @@ function renderAnalytics(){
   renderHierLog();
 }
 
+function initSEInspector(){
+  var sel=document.getElementById('insp-se');
+  if(!sel||sel.options.length>1)return;
+  var ses=[];
+  hier.forEach(function(h){if(h.role==='SE'&&h.isActive!==false)ses.push(h.name);});
+  ses.sort().forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+}
+function renderSEInspector(){
+  var seName=document.getElementById('insp-se').value;
+  var res=document.getElementById('insp-result');
+  if(!seName||!res)return;
+  var sNameL=seName.toLowerCase();
+  var hEntry=hier.find(function(h){return h.name===seName;})||{};
+  var myE=entries.filter(function(e){
+    return (e.byEid&&hEntry.empid&&e.byEid===hEntry.empid)||
+           (e.byName&&(e.byName||'').toLowerCase()===sNameL)||
+           (e.by||'').toLowerCase()===sNameL;
+  });
+  // Sort descending by date then at
+  myE=myE.slice().sort(function(a,b){
+    var da=a.date||'',db=b.date||'';
+    if(db>da)return 1;if(db<da)return -1;
+    return (b.at||0)-(a.at||0);
+  });
+  if(!myE.length){res.innerHTML='<div style="color:#9ca3af;padding:8px">No entries found for '+seName+'</div>';return;}
+  var rows=myE.slice(0,20).map(function(e,i){
+    var bg=i===0?'#eff6ff':'';
+    var dateStr=e.date||'—';
+    var atStr=e.at?(new Date(e.at).toLocaleString('en-IN')):'—';
+    var byStr=(e.byName||e.by||'')+(e.byEid?' ('+e.byEid+')':'');
+    var outlet=(e.outletName||e.outletId||'—');
+    return'<tr style="background:'+bg+';border-bottom:1px solid #f3f4f6">'+
+      '<td style="padding:4px 6px;font-weight:'+(i===0?'700':'400')+';color:'+(i===0?'#1e40af':'inherit')+'">'+dateStr+'</td>'+
+      '<td style="padding:4px 6px;font-size:10px;color:#6b7280">'+atStr+'</td>'+
+      '<td style="padding:4px 6px;font-size:11px">'+outlet+'</td>'+
+      '<td style="padding:4px 6px;font-size:10px;color:#6b7280">'+byStr+'</td>'+
+      '<td style="padding:4px 6px;font-size:10px;color:'+(e.isFinal===false?'#ef4444':'#374151')+'">'+
+        (e.isFinal===false?'❌ NOT FINAL':'✅ Final')+'</td>'+
+      '</tr>';
+  }).join('');
+  res.innerHTML='<div style="margin-bottom:6px;font-size:11px;color:#1F3864"><strong>'+myE.length+' entries found</strong> for '+seName+' (showing last 20, sorted by visit date ↓)</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+    '<thead><tr style="background:#1F3864;color:#fff"><th style="padding:4px 6px;text-align:left">Visit Date</th><th style="padding:4px 6px;text-align:left">Submitted At</th><th style="padding:4px 6px;text-align:left">Outlet</th><th style="padding:4px 6px;text-align:left">By</th><th style="padding:4px 6px;text-align:left">Status</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div>'+
+    '<div style="margin-top:6px;font-size:10px;color:#6b7280">🔵 Blue row = entry that Status board uses as "Last Submit"</div>';
+}
 function renderHierLog(){
   var logDiv=document.getElementById('an-hier-log');
   if(!logDiv)return;
