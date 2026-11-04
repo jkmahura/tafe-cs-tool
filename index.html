@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v101</title>
+<title>TAFE East Zone – CS Field Tool v102</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1250,15 +1250,31 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- SE Entry Inspector -->
+    <!-- SE Entry Inspector + Date Correction -->
     <div class="card">
-      <div class="ch or">🔍 SE Entry Inspector (ZM Debug)</div>
+      <div class="ch or">🔍 SE Entry Inspector &amp; Date Correction (ZM)</div>
       <div class="cb" style="font-size:12px">
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
           <select id="insp-se" style="padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;flex:1;min-width:150px"><option value="">— Select SE —</option></select>
           <button class="btn bsm" style="background:#1F3864;color:#fff" onclick="renderSEInspector()">🔍 Inspect</button>
         </div>
         <div id="insp-result"></div>
+        <!-- Date correction panel — shown after Inspect -->
+        <div id="insp-correct-panel" style="display:none;margin-top:12px;padding:12px;background:#fef9ec;border:1px solid #fcd34d;border-radius:8px">
+          <div style="font-weight:700;color:#92400e;margin-bottom:8px">✏️ Correct Visit Date</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div>
+              <div style="font-size:11px;color:#6b7280;margin-bottom:3px">Select entry to correct</div>
+              <select id="insp-entry-sel" style="padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;min-width:200px"></select>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6b7280;margin-bottom:3px">New visit date</div>
+              <input type="date" id="insp-new-date" style="padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+            </div>
+            <button class="btn bsm" style="background:#dc2626;color:#fff" onclick="zmCorrectEntryDate()">✅ Apply Correction</button>
+          </div>
+          <div id="insp-correct-ok" style="margin-top:8px;font-size:11px"></div>
+        </div>
       </div>
     </div>
 
@@ -2163,7 +2179,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v101';
+    if(tsub)tsub.textContent='CS Field Tool v102';
   }catch(e){}
 
   // Step 3: Set dates
@@ -5243,6 +5259,8 @@ function initSEInspector(){
   hier.forEach(function(h){if(h.role==='SE'&&h.isActive!==false)ses.push(h.name);});
   ses.sort().forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
 }
+// Store inspected entries for correction panel
+var _inspEntries=[];
 function renderSEInspector(){
   var seName=document.getElementById('insp-se').value;
   var res=document.getElementById('insp-result');
@@ -5260,27 +5278,102 @@ function renderSEInspector(){
     if(db>da)return 1;if(db<da)return -1;
     return (b.at||0)-(a.at||0);
   });
-  if(!myE.length){res.innerHTML='<div style="color:#9ca3af;padding:8px">No entries found for '+seName+'</div>';return;}
-  var rows=myE.slice(0,20).map(function(e,i){
+  _inspEntries=myE;
+  if(!myE.length){
+    res.innerHTML='<div style="color:#9ca3af;padding:8px">No entries found for '+seName+'</div>';
+    document.getElementById('insp-correct-panel').style.display='none';
+    return;
+  }
+  var rows=myE.slice(0,30).map(function(e,i){
     var bg=i===0?'#eff6ff':'';
     var dateStr=e.date||'—';
     var atStr=e.at?(new Date(e.at).toLocaleString('en-IN')):'—';
-    var byStr=(e.byName||e.by||'')+(e.byEid?' ('+e.byEid+')':'');
     var outlet=(e.outletName||e.outletId||'—');
     return'<tr style="background:'+bg+';border-bottom:1px solid #f3f4f6">'+
       '<td style="padding:4px 6px;font-weight:'+(i===0?'700':'400')+';color:'+(i===0?'#1e40af':'inherit')+'">'+dateStr+'</td>'+
       '<td style="padding:4px 6px;font-size:10px;color:#6b7280">'+atStr+'</td>'+
       '<td style="padding:4px 6px;font-size:11px">'+outlet+'</td>'+
-      '<td style="padding:4px 6px;font-size:10px;color:#6b7280">'+byStr+'</td>'+
       '<td style="padding:4px 6px;font-size:10px;color:'+(e.isFinal===false?'#ef4444':'#374151')+'">'+
         (e.isFinal===false?'❌ NOT FINAL':'✅ Final')+'</td>'+
       '</tr>';
   }).join('');
-  res.innerHTML='<div style="margin-bottom:6px;font-size:11px;color:#1F3864"><strong>'+myE.length+' entries found</strong> for '+seName+' (showing last 20, sorted by visit date ↓)</div>'+
+  res.innerHTML='<div style="margin-bottom:6px;font-size:11px;color:#1F3864"><strong>'+myE.length+' entries found</strong> for '+seName+' (showing last 30, sorted by visit date ↓)</div>'+
     '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
-    '<thead><tr style="background:#1F3864;color:#fff"><th style="padding:4px 6px;text-align:left">Visit Date</th><th style="padding:4px 6px;text-align:left">Submitted At</th><th style="padding:4px 6px;text-align:left">Outlet</th><th style="padding:4px 6px;text-align:left">By</th><th style="padding:4px 6px;text-align:left">Status</th></tr></thead>'+
+    '<thead><tr style="background:#1F3864;color:#fff"><th style="padding:4px 6px;text-align:left">Visit Date</th><th style="padding:4px 6px;text-align:left">Submitted At</th><th style="padding:4px 6px;text-align:left">Outlet</th><th style="padding:4px 6px;text-align:left">Status</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table></div>'+
     '<div style="margin-top:6px;font-size:10px;color:#6b7280">🔵 Blue row = entry that Status board uses as "Last Submit"</div>';
+  // Populate correction dropdown
+  var sel=document.getElementById('insp-entry-sel');
+  sel.innerHTML='<option value="">— Pick entry to correct —</option>';
+  myE.slice(0,30).forEach(function(e,i){
+    var o=document.createElement('option');
+    o.value=i;
+    var atStr=e.at?(' | submitted '+new Date(e.at).toLocaleDateString('en-IN')):'';
+    o.textContent=(e.date||'?')+' — '+(e.outletName||e.outletId||'?')+atStr;
+    sel.appendChild(o);
+  });
+  document.getElementById('insp-new-date').value='';
+  document.getElementById('insp-correct-ok').innerHTML='';
+  document.getElementById('insp-correct-panel').style.display='block';
+}
+
+async function zmCorrectEntryDate(){
+  var idx=parseInt(document.getElementById('insp-entry-sel').value,10);
+  var newDate=document.getElementById('insp-new-date').value;
+  var okDiv=document.getElementById('insp-correct-ok');
+  if(isNaN(idx)||!_inspEntries[idx]){okDiv.innerHTML='<span style="color:#dc2626">Select an entry first.</span>';return;}
+  if(!newDate){okDiv.innerHTML='<span style="color:#dc2626">Pick a new date.</span>';return;}
+  var e=_inspEntries[idx];
+  var oldDate=e.date;
+  if(newDate===oldDate){okDiv.innerHTML='<span style="color:#6b7280">Date is already '+oldDate+'.</span>';return;}
+  var confirmed=await showConfirm(
+    'Correct visit date for '+( e.outletName||e.outletId)+' from '+oldDate+' → '+newDate+'?\n\n'+
+    'This updates the entry locally and pushes the correction to the Sheet.\n'+
+    'The original entry will be marked superseded.');
+  if(!confirmed)return;
+  // Build corrected entry: same data, new date, new id, _replaces old id
+  var MONTHS_=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var dt=new Date(newDate+'T12:00:00');
+  var mi=dt.getMonth()>=3?dt.getMonth()-3:dt.getMonth()+9;
+  var newMon=MONTHS[mi]||MONTHS_[dt.getMonth()];
+  var newYr=String(dt.getFullYear());
+  var corrected=Object.assign({},e,{
+    date:newDate,month:newMon,year:newYr,
+    at:Date.now(),
+    id:e.id.replace(oldDate,newDate),
+    _replaces:e.id,
+    _correctedBy:CU.name,_correctedAt:Date.now()
+  });
+  // Mark original as not final locally
+  var orig=Object.assign({},e,{isFinal:false,_supersededBy:corrected.id,_supersededAt:Date.now()});
+  // Update entries array
+  entries=entries.map(function(x){return x.id===e.id?orig:x;});
+  entries.push(corrected);
+  // Persist
+  var eObj={};entries.forEach(function(x){eObj[x.id]=x;});ls('entries',eObj);
+  // Push both to Sheet (orig as superseded, corrected as new)
+  okDiv.innerHTML='<span style="color:#2563eb">⏳ Pushing to Sheet…</span>';
+  var pushOk=0,pushFail=0;
+  async function pushOne(entry){
+    if(!GSURL)return;
+    try{
+      var fd=new FormData();
+      fd.append('action','submit');
+      fd.append('payload',JSON.stringify(entry));
+      var r=await fetch(GSURL,{method:'POST',body:fd});
+      var j=await r.json();
+      if(j.status==='ok')pushOk++;else pushFail++;
+    }catch(ex){pushFail++;}
+  }
+  await pushOne(orig);
+  await pushOne(corrected);
+  if(pushFail===0){
+    okDiv.innerHTML='<span style="color:#16a34a">✅ Correction saved! Old entry ('+oldDate+') marked superseded. New entry ('+newDate+') pushed to Sheet. Refresh the app to see updated Status board.</span>';
+  } else {
+    okDiv.innerHTML='<span style="color:#d97706">⚠ Saved locally but Sheet push had errors ('+pushFail+' failed). Try Resend Pending.</span>';
+  }
+  // Refresh inspector
+  setTimeout(function(){renderSEInspector();},400);
 }
 function renderHierLog(){
   var logDiv=document.getElementById('an-hier-log');
