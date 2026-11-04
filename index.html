@@ -3739,7 +3739,7 @@ function renderStatus(){
   document.getElementById('status-date').textContent=today;
   var stFilter=v('st-state');
   var ses=[];
-  hier.forEach(function(hh){if(hh.role==='SE'||hh.role==='AM'||hh.role==='KM')ses.push(hh);});
+  hier.forEach(function(hh){if(hh.role==='SE'||hh.role==='KM')ses.push(hh);});
   if(!ses.length){
     var seSet={};
     dealers.forEach(function(d){if(d.se&&!seSet[d.se])seSet[d.se]={name:d.se,rm:d.rm,states:{},role:'SE'};if(d.se)seSet[d.se].states[d.state]=1;});
@@ -3770,9 +3770,7 @@ function renderStatus(){
     var myE=entries.filter(function(e){
       return (e.byEid&&s.empid&&e.byEid===s.empid)||
              (e.byName&&(e.byName||'').toLowerCase()===sNameL)||
-             (e.by||'').toLowerCase()===sNameL||
-             // AM acting as SE: count entries where dealer's am field matches this person
-             (s.role==='AM'&&(e.am||'').toLowerCase()===sNameL);
+             (e.by||'').toLowerCase()===sNameL;
     });
     var todayE=myE.filter(function(e){return e.date===today;});
     var lastE=myE.slice().sort(function(a,b){return (b.at||0)-(a.at||0)||(b.date>a.date?1:b.date<a.date?-1:0);})[0];
