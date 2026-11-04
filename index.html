@@ -1305,7 +1305,8 @@ tr:last-child td{border-bottom:none}
       <div style="margin-top:12px;padding:10px 12px;background:#fef3c7;border-radius:8px;border-left:3px solid #d97706;font-size:12px;color:#92400e">
         <strong>Key rules:</strong><br>
         • SE's target = sum of dealer-level targets for all dealers assigned to that SE<br>
-        • Score can exceed the weight if SE beats the target (e.g. 110% achievement = 11 pts on a 10-pt param)<br>
+        • Score is capped at the weight even if SE beats the target — focus on all params, not just one (e.g. 110% achievement still = 10 pts on a 10-pt param)<br>
+        • In case of a tie on total score, EW (Extended Warranty) score is the tiebreaker<br>
         • HP &amp; FA use target-based scoring when targets are in the month's sheet; relative (÷ zone best) otherwise<br>
         • Score is live (MTD) — refreshes every time you sync from the Google Sheet
       </div>
@@ -5264,7 +5265,7 @@ function logHierChange(desc){
 //     FA (Field Activity count)    = 25 pts  [no target — always relative]
 //   Total = sum of all 6 → max 100 if all parameters hit 100% of target
 //   HP and FA have no monthly targets, so they always use relative scoring
-//   For target-based params: score can exceed weight if SE beats target (capped at 2× weight)
+//   For target-based params: score is capped at weight (100% achievement = full weight; over-achievement does NOT add bonus)
 var SE_COMP_W={sl:10,rev:10,sec:25,ew:20,hp:10,fa:25};
 
 function _seCompGetData(mon,yr){
@@ -5316,9 +5317,9 @@ function _seCompGetData(mon,yr){
     var a=seAct[se],t=seTgt[se];
     var sec=(a.soil||0)+(a.sparts||0);
 
-    // Target-based scoring: (actual/target) × weight, capped at 2× weight
+    // Target-based scoring: (actual/target) × weight, capped at weight (100% = full weight; no bonus for over-achievement)
     function tgtScore(act,tgt,w){
-      if(tgt>0)return Math.min(w*2, w*(act/tgt));
+      if(tgt>0)return Math.min(w, w*(act/tgt));
       return 0;
     }
     var slS=tgtScore(a.sl,t.sl,SE_COMP_W.sl);
@@ -5345,7 +5346,7 @@ function _seCompGetData(mon,yr){
       visits:a.visits
     };
   }).filter(function(r){return r.visits>0||r.sl>0||r.hp>0||r.fa>0;})
-   .sort(function(a,b){return b.score-a.score;});
+   .sort(function(a,b){var sd=b.score-a.score;return sd!==0?sd:(b.ewS-a.ewS);});
 }
 
 function renderSECompetition(mon,yr){
@@ -5399,7 +5400,7 @@ function renderSECompetition(mon,yr){
     '<div style="margin-top:8px;font-size:10px;color:#9ca3af;line-height:1.6">'+
     '• SL / Rev / Sec.Offtake / EW: score = (MTD actual ÷ monthly target) × weight — capped at 2× weight max<br>'+
     '• HP / FA: target-based when targets provided in sheet; else relative to zone best performer<br>'+
-    '• Max score = 100 (all 6 KPIs at 100% of target). Can exceed 100 if target is beaten.</div>';
+    '• Max score = 100 (all 6 KPIs at 100% of target). Score is capped at max — beating target does not add extra points. Tie on total score → EW score decides rank.</div>';
 }
 
 // Dedicated Competition page renderer
