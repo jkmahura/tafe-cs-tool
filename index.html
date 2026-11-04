@@ -298,7 +298,7 @@ tr:last-child td{border-bottom:none}
         <div class="ki"><label>Svc Mkt Share %</label><input type="number" id="kpi-sms" placeholder="0.0" step="0.1" max="100"></div>
         <div class="ki"><label>Svc Retention %</label><input type="number" id="kpi-sret" placeholder="0.0" step="0.1" max="100"></div>
         <div class="ki" style="grid-column:1/-1"><label>Vehicles in Field (7yr Population)</label><input type="number" id="kpi-vif" placeholder="0"></div>
-        <div class="ki"><label>🎯 HP (High Prospect)</label><input type="number" id="kpi-hp" placeholder="0" min="0" title="No. of high-prospect tractors identified this visit"></div>
+        <div class="ki"><label>🔥 HP (Hot Prospect)</label><input type="number" id="kpi-hp" placeholder="0" min="0" title="No. of hot-prospect tractors identified this visit"></div>
         <div class="ki"><label>🎪 FA (Field Activity)</label><input type="number" id="kpi-fa" placeholder="0" min="0" title="No. of field activity events conducted"></div>
       </div>
       </div><!-- /monthly-kpi-block -->
@@ -1201,7 +1201,8 @@ tr:last-child td{border-bottom:none}
           <select id="an-comp-mon" onchange="document.getElementById('an-comp-body').innerHTML=renderSECompetition(this.value,2026)" style="padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
             <option>Apr</option><option>May</option><option>Jun</option><option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option selected>Nov</option><option>Dec</option>
           </select>
-          <span style="font-size:11px;color:#6b7280">Select month to see rankings</span>
+          <button onclick="navToComp()" style="padding:5px 10px;font-size:11px;background:#7030A0;color:#fff;border:none;border-radius:6px;cursor:pointer">↗ Full View</button>
+          <span style="font-size:11px;color:#6b7280">MTD achievement-based scores</span>
         </div>
         <div id="an-comp-body" style="font-size:12px"></div>
       </div>
@@ -1220,6 +1221,56 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <!-- PROFILE -->
+<!-- SE COMPETITION PAGE -->
+<div id="pg-comp" class="pg">
+  <div class="stl">🏆 SE Competition</div>
+  <div class="ssl">Monthly performance leaderboard — MTD scores update with every sync</div>
+
+  <div class="card">
+    <div class="ch" style="background:#7030A0;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>🏆 SE Contest Leaderboard</span>
+      <select id="comp-mon" onchange="renderCompPage()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600">
+        <option>Apr</option><option>May</option><option>Jun</option><option>Jul</option>
+        <option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option>
+        <option>Dec</option><option>Jan</option><option>Feb</option><option>Mar</option>
+      </select>
+    </div>
+    <div class="cb" id="comp-body" style="padding:12px">
+      <div style="color:#aaa;text-align:center;padding:20px;font-size:13px">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Scoring Logic Card -->
+  <div class="card">
+    <div class="ch" style="background:#1F3864;color:#fff">📐 How the Score is Calculated</div>
+    <div class="cb" style="font-size:13px;line-height:1.8">
+      <p style="margin:0 0 10px;font-weight:700;color:#1F3864">Total Score = sum of 6 parameter scores (max 100 points)</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f3f4f6">
+          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb">Parameter</th>
+          <th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e5e7eb">Weight</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb">Formula</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">SL (Service Labour)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD SL ÷ SE's SL Target) × 10</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">Revenue (₹L)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD Rev ÷ SE's Rev Target) × 10</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">Secondary Offtake<br><span style="font-size:10px;color:#6b7280">(S.Oil + S.Parts ₹L)</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(MTD Sec.Off ÷ SE's Sec Target) × 25</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">EW (Extended Warranty)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">20 pts</td><td style="padding:6px 8px;color:#374151">(MTD EW ÷ SE's EW Target) × 20</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">🔥 HP (Hot Prospect)<br><span style="font-size:10px;color:#6b7280">No monthly target</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(SE's HP ÷ Highest HP in zone) × 10</td></tr>
+          <tr style="background:#fafafa"><td style="padding:6px 8px">🎪 FA (Field Activity)<br><span style="font-size:10px;color:#6b7280">No monthly target</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(SE's FA ÷ Highest FA in zone) × 25</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;padding:10px 12px;background:#fef3c7;border-radius:8px;border-left:3px solid #d97706;font-size:12px;color:#92400e">
+        <strong>Key rules:</strong><br>
+        • SE's target = sum of dealer-level targets for all dealers assigned to that SE<br>
+        • Score can exceed the weight if SE beats the target (e.g. 110% achievement = 11 pts on a 10-pt param)<br>
+        • HP &amp; FA have no targets — always ranked relative to the zone's best performer<br>
+        • Score is live (MTD) — refreshes every time you sync from the Google Sheet
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="pg-profile" class="pg">
   <div class="stl">👤 My Profile</div>
 
@@ -1655,7 +1706,7 @@ function ok(entries) {
   <button class="bni"    data-p="entry"  onclick="nav('entry')"><span class="ic">📋</span>Entry</button>
   <button class="bni"    data-p="myview" onclick="nav('myview')"><span class="ic">📈</span>My View</button>
   <button class="bni"    data-p="status" onclick="nav('status')"><span class="ic">🟢</span>Status</button>
-  <button class="bni"    data-p="dealer" onclick="nav('dealer')"><span class="ic">🏪</span>Dealers</button>
+  <button class="bni"    data-p="comp"   onclick="nav('comp')"><span class="ic">🏆</span>Contest</button>
 </div>
 
 <div id="toast"></div>
@@ -2173,6 +2224,12 @@ function nav(p){
   }
   if(p==='myview'){buildMyTabs();renderMyView();}
   if(p==='upload'){}
+  if(p==='comp'){
+    // Set month selector to current month
+    var cm=document.getElementById('comp-mon');
+    if(cm){cm.value=selMon||'Nov';}
+    renderCompPage();
+  }
 }
 
 function toggleDr(){
@@ -4986,103 +5043,156 @@ function logHierChange(desc){
 }
 
 // -- SE COMPETITION ---------------------------------------
-// Weightage: SL=10%, Rev=10%, SecOfftake(oil+parts)=25%, EW=20%, HP=10%, FA=25%
+// SCORING LOGIC (out of 100 points):
+//   Each SE gets a score per parameter = (SE's MTD actual / Target for that parameter) × weight
+//   If no target exists, scoring falls back to relative (SE actual / zone best × weight)
+//   Parameters and weights:
+//     SL (Service Labour)          = 10 pts
+//     Revenue (₹L)                 = 10 pts
+//     Sec.Offtake (Oil + Parts ₹L) = 25 pts
+//     EW (Extended Warranty)       = 20 pts
+//     HP (Hot Prospect count)      = 10 pts  [no target — always relative]
+//     FA (Field Activity count)    = 25 pts  [no target — always relative]
+//   Total = sum of all 6 → max 100 if all parameters hit 100% of target
+//   HP and FA have no monthly targets, so they always use relative scoring
+//   For target-based params: score can exceed weight if SE beats target (capped at 2× weight)
 var SE_COMP_W={sl:10,rev:10,sec:25,ew:20,hp:10,fa:25};
-function renderSECompetition(mon,yr){
-  mon=mon||getCurrentMonth();yr=yr||2026;
-  var MONTHS=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
-  if(!mon)mon=MONTHS[new Date().getMonth()];
 
-  // Gather SE list from hierarchy
+function _seCompGetData(mon,yr){
+  // Gather SE list
   var seList=[];
   hier.forEach(function(h){if(h.role==='SE'&&h.isActive!==false)seList.push(h.name);});
-  if(!seList.length){
-    dealers.forEach(function(d){if(d.se&&seList.indexOf(d.se)<0)seList.push(d.se);});
-  }
+  if(!seList.length){dealers.forEach(function(d){if(d.se&&seList.indexOf(d.se)<0)seList.push(d.se);});}
   seList.sort();
 
-  // Build SE totals for the month
-  var seTotals={};
-  seList.forEach(function(se){
-    seTotals[se]={sl:0,rev:0,soil:0,sparts:0,ew:0,hp:0,fa:0,outlets:0};
+  // Build SE → target totals (from MASTER_TARGETS, summed across dealer-level targets for this SE)
+  var seTgt={};
+  seList.forEach(function(se){seTgt[se]={sl:0,rev:0,sec:0,ew:0};});
+  dealers.forEach(function(d){
+    var se=d.se;if(!se||!seTgt[se])return;
+    var t=getTarget('dealer',d.id,mon,yr)||getTarget('dealer',d.code,mon,yr)||{};
+    seTgt[se].sl+=(parseFloat(t.sl)||0);
+    seTgt[se].rev+=(parseFloat(t.rev)||0);
+    seTgt[se].sec+=(parseFloat(t.soil)||0)+(parseFloat(t.sparts)||0);
+    seTgt[se].ew+=(parseFloat(t.ew)||0);
   });
+
+  // Build SE → actuals (MTD from entries for this month)
+  var seAct={};
+  seList.forEach(function(se){seAct[se]={sl:0,rev:0,soil:0,sparts:0,ew:0,hp:0,fa:0,visits:0};});
   entries.forEach(function(e){
     if(e.month!==mon)return;
     var se=e.se||e.byName||e.by||'';
-    if(!se||!seTotals[se])return;
-    var t=seTotals[se];
-    var k=e.kpi||e;
-    t.sl+=(parseFloat(k.sl)||0);
-    t.rev+=(parseFloat(k.rev)||0);
-    t.soil+=(parseFloat(k.soil)||0);
-    t.sparts+=(parseFloat(k.sparts)||0);
-    t.ew+=(parseFloat(k.ew)||0);
-    t.hp+=(parseFloat(k.hp)||0);
-    t.fa+=(parseFloat(k.fa)||0);
-    t.outlets++;
+    if(!se||!seAct[se])return;
+    var a=seAct[se],k=e.kpi||e;
+    a.sl+=(parseFloat(k.sl)||0);a.rev+=(parseFloat(k.rev)||0);
+    a.soil+=(parseFloat(k.soil)||0);a.sparts+=(parseFloat(k.sparts)||0);
+    a.ew+=(parseFloat(k.ew)||0);a.hp+=(parseFloat(k.hp)||0);a.fa+=(parseFloat(k.fa)||0);
+    a.visits++;
   });
 
-  // Get zone totals for relative scoring (max = zone total, score = SE/max * weight)
-  var maxSE={sl:0,rev:0,sec:0,ew:0,hp:0,fa:0};
-  seList.forEach(function(se){
-    var t=seTotals[se];
-    t.sec=(t.soil||0)+(t.sparts||0);
-    maxSE.sl=Math.max(maxSE.sl,t.sl);
-    maxSE.rev=Math.max(maxSE.rev,t.rev);
-    maxSE.sec=Math.max(maxSE.sec,t.sec);
-    maxSE.ew=Math.max(maxSE.ew,t.ew);
-    maxSE.hp=Math.max(maxSE.hp,t.hp);
-    maxSE.fa=Math.max(maxSE.fa,t.fa);
-  });
+  // For HP and FA: relative scoring vs zone best
+  var maxHP=0,maxFA=0;
+  seList.forEach(function(se){maxHP=Math.max(maxHP,seAct[se].hp);maxFA=Math.max(maxFA,seAct[se].fa);});
 
-  // Score each SE (proportional to best performer)
-  var ranked=seList.map(function(se){
-    var t=seTotals[se];
-    var score=0;
-    if(maxSE.sl>0)score+=SE_COMP_W.sl*(t.sl/maxSE.sl);
-    if(maxSE.rev>0)score+=SE_COMP_W.rev*(t.rev/maxSE.rev);
-    if(maxSE.sec>0)score+=SE_COMP_W.sec*(t.sec/maxSE.sec);
-    if(maxSE.ew>0)score+=SE_COMP_W.ew*(t.ew/maxSE.ew);
-    if(maxSE.hp>0)score+=SE_COMP_W.hp*(t.hp/maxSE.hp);
-    if(maxSE.fa>0)score+=SE_COMP_W.fa*(t.fa/maxSE.fa);
-    return{name:se,score:Math.round(score*10)/10,sl:t.sl,rev:t.rev,sec:t.sec,ew:t.ew,hp:t.hp,fa:t.fa,outlets:t.outlets};
-  }).filter(function(r){return r.outlets>0||r.sl>0||r.hp>0||r.fa>0;})
-    .sort(function(a,b){return b.score-a.score;});
+  // Score each SE
+  return seList.map(function(se){
+    var a=seAct[se],t=seTgt[se];
+    var sec=(a.soil||0)+(a.sparts||0);
 
-  if(!ranked.length)return'<div style="color:#aaa;padding:16px">No entry data for '+mon+'. Submit entries or push historical data first.</div>';
+    function tgtScore(act,tgt,w){
+      if(tgt>0)return Math.min(w*2, w*(act/tgt)); // target-based, capped at 2×
+      return 0; // no target = 0 for target params
+    }
+    var slS=tgtScore(a.sl,t.sl,SE_COMP_W.sl);
+    var revS=tgtScore(a.rev,t.rev,SE_COMP_W.rev);
+    var secS=tgtScore(sec,t.sec,SE_COMP_W.sec);
+    var ewS=tgtScore(a.ew,t.ew,SE_COMP_W.ew);
+    var hpS=maxHP>0?SE_COMP_W.hp*(a.hp/maxHP):0;  // relative
+    var faS=maxFA>0?SE_COMP_W.fa*(a.fa/maxFA):0;  // relative
+
+    // Achievement % for display
+    function pct(act,tgt){return tgt>0?Math.round(act/tgt*100):null;}
+
+    return{
+      name:se,
+      score:Math.round((slS+revS+secS+ewS+hpS+faS)*10)/10,
+      sl:a.sl,slT:t.sl,slPct:pct(a.sl,t.sl),slS:Math.round(slS*10)/10,
+      rev:a.rev,revT:t.rev,revPct:pct(a.rev,t.rev),revS:Math.round(revS*10)/10,
+      sec:sec,secT:t.sec,secPct:pct(sec,t.sec),secS:Math.round(secS*10)/10,
+      ew:a.ew,ewT:t.ew,ewPct:pct(a.ew,t.ew),ewS:Math.round(ewS*10)/10,
+      hp:a.hp,hpS:Math.round(hpS*10)/10,
+      fa:a.fa,faS:Math.round(faS*10)/10,
+      visits:a.visits
+    };
+  }).filter(function(r){return r.visits>0||r.sl>0||r.hp>0||r.fa>0;})
+   .sort(function(a,b){return b.score-a.score;});
+}
+
+function renderSECompetition(mon,yr){
+  mon=mon||selMon||'Nov';yr=yr||selYr||2026;
+  var ranked=_seCompGetData(mon,yr);
+  if(!ranked.length)return'<div style="color:#aaa;padding:16px;text-align:center">No entry data for '+mon+'. Submit entries first.</div>';
 
   var MEDALS=['🥇','🥈','🥉'];
+  var topScore=ranked[0]?ranked[0].score:1;
+
+  function pBadge(pct,s){
+    if(pct===null)return'<span style="color:#aaa;font-size:10px">—</span>';
+    var c=pct>=100?'#166534':pct>=70?'#92400e':'#991b1b';
+    return'<span style="color:'+c+';font-weight:700;font-size:11px">'+pct+'%</span><br><span style="color:#6b7280;font-size:9px">('+s+'pt)</span>';
+  }
+  function relBadge(val,s){
+    return val>0?'<span style="font-weight:700;font-size:12px">'+val+'</span><br><span style="color:#6b7280;font-size:9px">('+s+'pt)</span>':'<span style="color:#aaa;font-size:10px">—</span>';
+  }
+
   var rows=ranked.map(function(r,i){
-    var medal=i<3?MEDALS[i]:(i+1)+'.';
-    var scoreBar='<div style="height:6px;border-radius:3px;background:#e5e7eb;margin-top:3px"><div style="height:6px;border-radius:3px;background:'+(i===0?'#1F3864':i===1?'#4472C4':'#70AD47')+';width:'+Math.min(100,r.score)+'%"></div></div>';
+    var medal=i<3?MEDALS[i]:'<span style="color:#9ca3af">'+(i+1)+'.</span>';
+    var barW=Math.round(r.score/Math.max(topScore,1)*100);
+    var barC=i===0?'#1F3864':i===1?'#4472C4':i===2?'#70AD47':'#94a3b8';
+    var scoreBar='<div style="height:5px;border-radius:3px;background:#e5e7eb;margin-top:3px"><div style="height:5px;border-radius:3px;background:'+barC+';width:'+barW+'%"></div></div>';
     return'<tr style="background:'+(i%2?'#f7f9ff':'#fff')+';border-bottom:1px solid #e5e7eb">'+
-      '<td style="padding:8px 10px;font-size:13px;font-weight:700">'+medal+'</td>'+
-      '<td style="padding:8px 10px;font-size:13px"><strong>'+r.name+'</strong>'+scoreBar+'</td>'+
-      '<td style="padding:8px 6px;text-align:center;font-size:13px;font-weight:700;color:#1F3864">'+r.score+'</td>'+
-      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.sl+'</td>'+
-      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.rev.toFixed(1)+'</td>'+
-      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.sec.toFixed(1)+'</td>'+
-      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.ew+'</td>'+
-      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.hp+'</td>'+
-      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.fa+'</td>'+
+      '<td style="padding:7px 8px;font-size:14px;text-align:center">'+medal+'</td>'+
+      '<td style="padding:7px 10px"><strong style="font-size:12px">'+r.name+'</strong>'+scoreBar+'</td>'+
+      '<td style="padding:7px 6px;text-align:center"><span style="font-size:14px;font-weight:800;color:'+(i===0?'#1F3864':'#374151')+'">'+r.score+'</span><br><span style="font-size:9px;color:#9ca3af">/ 100</span></td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+pBadge(r.slPct,r.slS)+'</td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+pBadge(r.revPct,r.revS)+'</td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+pBadge(r.secPct,r.secS)+'</td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+pBadge(r.ewPct,r.ewS)+'</td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+relBadge(r.hp,r.hpS)+'</td>'+
+      '<td style="padding:7px 6px;text-align:center;font-size:11px">'+relBadge(r.fa,r.faS)+'</td>'+
       '</tr>';
   }).join('');
 
-  return'<div style="margin-bottom:8px;font-size:11px;color:#6b7280">'+
-    'Score = SL(10%) + Rev(10%) + Sec.Offtake(25%) + EW(20%) + HP(10%) + FA(25%) — relative to best in zone</div>'+
-    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:500px">'+
-    '<thead><tr style="background:#1F3864;color:#fff">'+
-    '<th style="padding:8px 6px;text-align:left">#</th>'+
-    '<th style="padding:8px 10px;text-align:left">SE Name</th>'+
-    '<th style="padding:8px 6px;text-align:center">Score</th>'+
-    '<th style="padding:8px 6px;text-align:center">SL<br><span style="font-weight:400;font-size:9px">10%</span></th>'+
-    '<th style="padding:8px 6px;text-align:center">Rev(L)<br><span style="font-weight:400;font-size:9px">10%</span></th>'+
-    '<th style="padding:8px 6px;text-align:center">Sec.Off<br><span style="font-weight:400;font-size:9px">25%</span></th>'+
-    '<th style="padding:8px 6px;text-align:center">EW<br><span style="font-weight:400;font-size:9px">20%</span></th>'+
-    '<th style="padding:8px 6px;text-align:center">HP<br><span style="font-weight:400;font-size:9px">10%</span></th>'+
-    '<th style="padding:8px 6px;text-align:center">FA<br><span style="font-weight:400;font-size:9px">25%</span></th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px">'+
+    '<thead>'+
+    '<tr style="background:#1F3864;color:#fff;font-size:10px">'+
+    '<th style="padding:6px 8px;text-align:center">#</th>'+
+    '<th style="padding:6px 10px;text-align:left">SE</th>'+
+    '<th style="padding:6px 8px;text-align:center">Score<br>/100</th>'+
+    '<th style="padding:6px 6px;text-align:center">SL<br><span style="opacity:.7">10pt</span></th>'+
+    '<th style="padding:6px 6px;text-align:center">Rev<br><span style="opacity:.7">10pt</span></th>'+
+    '<th style="padding:6px 6px;text-align:center">Sec.Off<br><span style="opacity:.7">25pt</span></th>'+
+    '<th style="padding:6px 6px;text-align:center">EW<br><span style="opacity:.7">20pt</span></th>'+
+    '<th style="padding:6px 6px;text-align:center">🔥HP<br><span style="opacity:.7">10pt</span></th>'+
+    '<th style="padding:6px 6px;text-align:center">🎪FA<br><span style="opacity:.7">25pt</span></th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div style="margin-top:8px;font-size:10px;color:#9ca3af;line-height:1.6">'+
+    '• SL / Rev / Sec.Offtake / EW: score = (MTD actual ÷ monthly target) × weight — capped at 2× if no target set<br>'+
+    '• HP / FA: no monthly target — score = (SE count ÷ zone best) × weight (relative)<br>'+
+    '• Max score = 100 (all 6 KPIs at 100% of target). Can exceed 100 if target is beaten.</div>';
 }
+
+// Dedicated Competition page renderer
+function renderCompPage(){
+  var mon=v('comp-mon')||selMon||'Nov';
+  var ranked=_seCompGetData(mon,selYr||2026);
+  var body=document.getElementById('comp-body');
+  if(!body)return;
+  if(!ranked.length){body.innerHTML='<div style="color:#aaa;padding:24px;text-align:center">No data for '+mon+'. Submit entries or pull from Sheet first.</div>';return;}
+  body.innerHTML=renderSECompetition(mon,selYr||2026);
+}
+function navToComp(){nav('comp');}
 
 // -- ZM TOOLS ---------------------------------------------
 function zmTab(tab,btn){
