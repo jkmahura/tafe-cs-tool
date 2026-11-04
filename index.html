@@ -4075,17 +4075,19 @@ function renderStatus(){
     var stDisplay=typeof s.states==='string'?s.states:(s.states?Object.keys(s.states).join(', '):'-');
     return{name:s.name,rm:s.rm||'-',states:stDisplay,
       lastTime:lastE?(function(){
-        // Try at (timestamp), then date string fallback
-        var ts=lastE.at;
-        var d=ts?new Date(ts):null;
-        if(!d||isNaN(d)){
-          // Fall back to entry date string if available
-          if(lastE.date){var parts=lastE.date.split('-');d=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):null;}
+        // Always use entry.date (actual visit date) for the date portion
+        // Use entry.at (sync timestamp) only for the time-of-day portion
+        var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var dateStr=lastE.date||'';
+        var day,mon;
+        if(dateStr){
+          var parts=dateStr.split('-');
+          if(parts.length===3){day=parseInt(parts[2],10);mon=MONTHS[parseInt(parts[1],10)-1];}
         }
-        if(!d||isNaN(d))return'Old entry';
-        var day=d.getDate();
-        var mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
-        if(ts){var hh=d.getHours();var mm=('0'+d.getMinutes()).slice(-2);var ampm=hh>=12?'PM':'AM';hh=hh%12||12;return day+'-'+mon+' '+hh+':'+mm+' '+ampm;}
+        if(!day||!mon)return'Old entry';
+        // Append time from at-timestamp if available
+        var ts=lastE.at;
+        if(ts){var td=new Date(ts);if(!isNaN(td)){var hh=td.getHours();var mm=('0'+td.getMinutes()).slice(-2);var ampm=hh>=12?'PM':'AM';hh=hh%12||12;return day+'-'+mon+' '+hh+':'+mm+' '+ampm;}}
         return day+'-'+mon;
       })():'Never',todayCnt:todayE.length,status:status,stcl:stcl,isToday:isToday,inactive:inactive};
   });
