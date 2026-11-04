@@ -325,6 +325,25 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
   </div>
+  <!-- OPENING STOCK CARD — once a month per dealer -->
+  <div class="card" id="opening-stock-card">
+    <div class="ch" style="background:#0f4c75;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+      <span>📦 Opening Stock (Month Start)</span>
+      <span style="font-size:10px;opacity:.85;font-weight:400">📅 Once a month per dealer</span>
+    </div>
+    <div class="cb">
+      <div id="os-submitted-banner" style="display:none;padding:9px 12px;background:#dcfce7;border-radius:8px;border-left:3px solid #16a34a;font-size:12px;color:#166534;margin-bottom:10px"></div>
+      <div id="os-fields">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:10px">Enter opening stock values as of 1st of this month. Locks after first submission — RM can edit if needed.</div>
+        <div class="kg">
+          <div class="ki"><label>Opening Parts Stock (₹L)</label><input type="number" id="os-parts" placeholder="0.00" step="0.01" min="0"></div>
+          <div class="ki"><label>Opening Oil Stock (₹L)</label><input type="number" id="os-oil" placeholder="0.00" step="0.01" min="0"></div>
+        </div>
+        <button class="btn bp bfw" onclick="submitOpeningStock()" id="os-submit-btn" style="margin-top:4px">📦 Submit Opening Stock</button>
+      </div>
+    </div>
+  </div>
+
   <!-- IMO CARD — visible for all types including KPD -->
   <div class="card" id="imo-entry-card">
     <div class="ch" style="background:#4a1d96;color:#fff">Step — IMO (Immobilised Orders)</div>
@@ -345,6 +364,28 @@ tr:last-child td{border-bottom:none}
     <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">📋 Today's Submitted Entries</div>
     <div id="today-entries-list"></div>
   </div>
+  <!-- RM OPENING STOCK EDIT PANEL (visible for RM/ZM only) -->
+  <div id="rm-os-panel" style="display:none;margin-top:16px">
+    <div class="card">
+      <div class="ch" style="background:#0f4c75;color:#fff">✏️ Edit Opening Stock (RM Authority)</div>
+      <div class="cb">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:10px">Select dealer and month to view or edit their opening stock entry.</div>
+        <div class="fr"><label>Filter SE</label><select id="ros-se" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px" onchange="loadROSDealers()"><option value="">All SE</option></select></div>
+        <div class="fr"><label>Dealer</label><select id="ros-outlet" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Select dealer…</option></select></div>
+        <div style="display:flex;gap:8px">
+          <div class="fr fh"><label>Month</label><select id="ros-mon" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+            <option>Apr</option><option>May</option><option>Jun</option><option>Jul</option>
+            <option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option>
+            <option>Dec</option><option>Jan</option><option>Feb</option><option>Mar</option>
+          </select></div>
+          <div class="fr fh"><label>Year</label><select id="ros-yr" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option>2025</option><option>2026</option><option>2027</option></select></div>
+        </div>
+        <button class="btn bp bfw" onclick="loadROSEntry()" style="margin-top:8px">🔍 Load</button>
+        <div id="ros-result" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- RM ENTRY EDIT PANEL (visible for RM only) -->
   <div id="rm-entry-edit-panel" style="display:none;margin-top:16px">
     <div class="card">
@@ -2202,7 +2243,7 @@ function nav(p){
   var pg=document.getElementById('pg-'+p);if(pg)pg.classList.add('on');
   document.querySelectorAll('.bni').forEach(function(b){b.classList.toggle('on',b.dataset.p===p);});
   // Page-specific init
-  if(p==='entry'){setupEntryType();checkEntryAlert();setTimeout(renderTodayEntries,200);setTimeout(initRMEntryPanel,300);}
+  if(p==='entry'){setupEntryType();checkEntryAlert();setTimeout(renderTodayEntries,200);setTimeout(initRMEntryPanel,300);setTimeout(initRMOSPanel,300);refreshOSCard();}
   if(p==='status')renderStatus();
   if(p==='targets'){loadTgtEnt();checkTgtLock();}
   if(p==='master')renderMaster();
@@ -2405,7 +2446,8 @@ function renderDash(tab){
     }).forEach(function(d){
       var dlvl=d.isDirect?'direct':'dealer';
       var dtgt=getTarget(dlvl,d.id,selMon,selYr)||getTarget(dlvl,d.code,selMon,selYr)||getTarget('dealer',d.id,selMon,selYr)||getTarget('dealer',d.code,selMon,selYr);
-      rows.push({k:(d.isDirect?'⭐ ':'🏪 ')+d.name,a:getDealerTotal(d.id,selMon,selYr),t:dtgt});
+      var os=getOSRecord(d.id,selMon,selYr)||{};
+      rows.push({k:(d.isDirect?'⭐ ':'🏪 ')+d.name,a:getDealerTotal(d.id,selMon,selYr),t:dtgt,_oid:d.id,_oparts:os.oparts,_ooil:os.ooil});
     });
   }else if(tab==='kpd'){
     // KPD tab: KPD dealers + Direct dealers together
@@ -2419,7 +2461,8 @@ function renderDash(tab){
       var ke=me.filter(function(e){return e.outletId===d.id;});
       var dlvl=d.isKPD?'kpd':'direct';
       var tgt=getTarget(dlvl,d.id,selMon,selYr)||getTarget(dlvl,d.code,selMon,selYr)||getTarget('dealer',d.id,selMon,selYr)||{};
-      rows.push({k:(d.isKPD?'🏭 ':'⭐ ')+d.name,a:agg(ke),t:tgt,_isKPD:d.isKPD});
+      var os=getOSRecord(d.id,selMon,selYr)||{};
+      rows.push({k:(d.isKPD?'🏭 ':'⭐ ')+d.name,a:agg(ke),t:tgt,_isKPD:d.isKPD,_oid:d.id,_oparts:os.oparts,_ooil:os.ooil});
     });
   }else if(tab==='km'){
     // KPD Mgr view -- show all outlets where kpdMgr=name
@@ -2538,6 +2581,7 @@ function renderDash(tab){
   var totA={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0};
   var totT={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0};
 
+  var showOS=(tab==='dealer'||tab==='kpd'); // show opening stock cols only on dealer/KPD tabs
   var dataRows=rows.map(function(r,ri){
     var a=r.a,t=r.t||{};
     totA.sl+=a.sl||0;totA.fs+=a.fs||0;totA.mj+=a.mj||0;totA.rev+=a.rev||0;
@@ -2547,7 +2591,13 @@ function renderDash(tab){
     totT.poil+=t.poil||0;totT.pparts+=t.pparts||0;
     totT.soil+=t.soil||0;totT.sparts+=t.sparts||0;totT.ew+=t.ew||0;totT.uc+=t.uc||0;
     var bg=ri%2?'#f7f9ff':'#fff';
-    return tvaRows(r.k,a,t,tab,bg);
+    var base=tvaRows(r.k,a,t,tab,bg);
+    if(!showOS)return base;
+    // Append opening stock columns (no target, just the value; dash if not submitted)
+    var hasOS=r._oparts!=null||r._ooil!=null;
+    var opc=hasOS?'<td style="padding:3px 6px;font-size:12px;text-align:right;border-left:3px solid #c7d2fe;color:#0f4c75;font-weight:600">'+(r._oparts!=null?fl(r._oparts):'-')+'</td>':'<td style="padding:3px 6px;font-size:11px;color:#d1d5db;text-align:right;border-left:3px solid #c7d2fe">—</td>';
+    var ooc=hasOS?'<td style="padding:3px 6px;font-size:12px;text-align:right;color:#0f4c75;font-weight:600">'+(r._ooil!=null?fl(r._ooil):'-')+'</td>':'<td style="padding:3px 6px;font-size:11px;color:#d1d5db;text-align:right">—</td>';
+    return base.replace('</tr>',opc+ooc+'</tr>');
   });
 
   var HS='background:var(--navy);color:#fff;font-size:11px';
@@ -2566,10 +2616,12 @@ function renderDash(tab){
            '<th style="padding:3px 5px;text-align:left;font-size:10px;'+(gsep?GS:GS1)+'">'+kpi+' Act</th>';
   }
   var hdr,span;
+  var osHdrCols='<th colspan="2" style="padding:4px 6px;text-align:center;border-left:3px solid rgba(255,255,255,.5);font-size:10px;letter-spacing:.5px">OPENING STOCK</th>';
+  var osSubCols='<th style="padding:3px 5px;text-align:right;font-size:10px;border-left:3px solid rgba(255,255,255,.35)">Parts(₹L)</th><th style="padding:3px 5px;text-align:right;font-size:10px">Oil(₹L)</th>';
   if(isKPD){
     // KPD+Direct tab: Primary Offtake + Secondary Offtake
-    hdr='<tr style="'+HS+'"><th '+NM+'>KPD / DIRECT</th>'+thg('PRIMARY TOTAL',1,true)+thg('PRIMARY BKDN',2,true)+thg('SECONDARY TOTAL',1,true)+thg('SEC BKDN',2,false)+'</tr>'+
-        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('P',true)+thp('P.Oil')+thp('P.Parts',true)+thp('S',true)+thp('S.Oil')+thp('S.Parts')+'</tr>'; span=13;
+    hdr='<tr style="'+HS+'"><th '+NM+'>KPD / DIRECT</th>'+thg('PRIMARY TOTAL',1,true)+thg('PRIMARY BKDN',2,true)+thg('SECONDARY TOTAL',1,true)+thg('SEC BKDN',2,false)+osHdrCols+'</tr>'+
+        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('P',true)+thp('P.Oil')+thp('P.Parts',true)+thp('S',true)+thp('S.Oil')+thp('S.Parts')+osSubCols+'</tr>'; span=15;
   }else if(tab==='ask'){
     hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',1,false)+'</tr>'+
         '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+'</tr>'; span=3;
@@ -2583,13 +2635,24 @@ function renderDash(tab){
     tab='kpd';
   }else{
     var isDr=(tab==='direct');
-    hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',3,true)+thg('REVENUE',1,true)+(isDr?thg('PRIMARY',3,true):'')+thg('SECONDARY',3,true)+thg('EW',1,true)+thg('UC',1,false)+'</tr>'+
-        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+thp('FS')+thp('MJ',true)+thp('Rev',true)+(isDr?thp('P')+thp('P.Parts')+thp('P.Oil',true):'')+thp('S')+thp('S.Parts')+thp('S.Oil',true)+thp('EW',true)+thp('UC')+'</tr>';
-    span=isDr?25:19;
+    var isDealer=(tab==='dealer');
+    var addOS=isDealer; // show opening stock cols for dealer tab
+    hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',3,true)+thg('REVENUE',1,true)+(isDr?thg('PRIMARY',3,true):'')+thg('SECONDARY',3,true)+thg('EW',1,true)+thg('UC',1,false)+(addOS?osHdrCols:'')+'</tr>'+
+        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+thp('FS')+thp('MJ',true)+thp('Rev',true)+(isDr?thp('P')+thp('P.Parts')+thp('P.Oil',true):'')+thp('S')+thp('S.Parts')+thp('S.Oil',true)+thp('EW',true)+thp('UC')+(addOS?osSubCols:'')+'</tr>';
+    span=isDr?25:isDealer?21:19;
   }
+  // Opening stock zone totals (for total row)
+  var osTotParts=0,osTotOil=0;
+  if(showOS){rows.forEach(function(r){osTotParts+=(r._oparts||0);osTotOil+=(r._ooil||0);});}
+  var osTotCells=showOS?
+    '<td style="padding:4px 6px;font-size:12px;font-weight:700;text-align:right;border-left:3px solid rgba(255,255,255,.5);color:#90caf9">'+fl(osTotParts)+'</td>'+
+    '<td style="padding:4px 6px;font-size:12px;font-weight:700;text-align:right;color:#90caf9">'+fl(osTotOil)+'</td>':'';
+  var totRow=tvaTotRow('🔢 '+(tab==='kpd'?'KPD':'ZONE')+' TOTAL',totA,totT,tab);
+  if(showOS)totRow=totRow.replace('</tr>',osTotCells+'</tr>');
+
     body.innerHTML='<div class="card" style="padding:0"><div class="stbl-wrap">'+
     '<table><thead>'+hdr+'</thead><tbody>'+
-    tvaTotRow('🔢 '+(tab==='kpd'?'KPD':'ZONE')+' TOTAL',totA,totT,tab)+
+    totRow+
     (dataRows.join('')||'<tr><td colspan="'+span+'" style="text-align:center;color:var(--sub);padding:20px">No data for '+selMon+'. Submit daily entries first.</td></tr>')+
     '</tbody></table></div></div>';
 }
@@ -3218,6 +3281,8 @@ function fillOutletDrop(){
         amNote.style.display='none';
       }
     }
+    // Refresh opening stock card for newly selected dealer
+    refreshOSCard();
   };
 }
 function checkEntryAlert(){
@@ -3619,6 +3684,147 @@ function clearEditEntry(){
   renderDash();
   window.scrollTo(0,0);
   toast('🗑️ Entry deleted -- form is ready for fresh entry');
+}
+
+// -- OPENING STOCK ----------------------------------------
+// Storage key: 'tafe_opening_stock' → array of {id, outletId, outletName, mon, yr, oparts, ooil, by, byRole, at}
+// id = outletId+'|'+mon+'|'+yr (unique per dealer per month)
+
+function getOpeningStock(){
+  try{return JSON.parse(localStorage.getItem('tafe_opening_stock')||'[]');}catch(e){return[];}
+}
+function saveOpeningStock(arr){
+  try{localStorage.setItem('tafe_opening_stock',JSON.stringify(arr));}catch(e){}
+}
+function getOSRecord(outletId,mon,yr){
+  return getOpeningStock().find(function(r){return r.outletId===outletId&&r.mon===mon&&String(r.yr)===String(yr);});
+}
+
+// Called when SE selects a dealer in the entry form — refresh OS card state
+function refreshOSCard(){
+  var card=document.getElementById('opening-stock-card');
+  var banner=document.getElementById('os-submitted-banner');
+  var fields=document.getElementById('os-fields');
+  if(!card)return;
+
+  // Hide for KPD/ASK
+  var oid=v('sel-outlet');
+  var outlet=dealers.find(function(d){return d.id===oid;})||{};
+  if(outlet.isKPD||outlet.isASK){card.style.display='none';return;}
+  card.style.display='';
+
+  if(!oid){banner.style.display='none';fields.style.display='';return;}
+  var rec=getOSRecord(oid,selMon,selYr);
+  if(rec){
+    banner.style.display='';
+    banner.innerHTML='✅ Opening stock submitted for <strong>'+selMon+' '+selYr+'</strong> — Parts: <strong>₹'+fl(rec.oparts)+'L</strong>, Oil: <strong>₹'+fl(rec.ooil)+'L</strong>'+
+      '<br><span style="font-size:10px;color:#166534">Submitted by '+rec.by+' on '+rec.at.split('T')[0]+'</span>';
+    fields.style.display='none'; // frozen for SE
+  } else {
+    banner.style.display='none';
+    fields.style.display='';
+    document.getElementById('os-parts').value='';
+    document.getElementById('os-oil').value='';
+  }
+}
+
+async function submitOpeningStock(){
+  var oid=v('sel-outlet');
+  if(!oid){toast('Select a dealer first');return;}
+  var oparts=parseFloat(document.getElementById('os-parts').value)||0;
+  var ooil=parseFloat(document.getElementById('os-oil').value)||0;
+  if(oparts===0&&ooil===0){if(!await showConfirm('Both values are 0 — submit anyway?'))return;}
+
+  var outlet=dealers.find(function(d){return d.id===oid;})||{};
+  var arr=getOpeningStock();
+  // Remove any existing record for this dealer+month (shouldn't exist if frozen, but guard)
+  arr=arr.filter(function(r){return!(r.outletId===oid&&r.mon===selMon&&String(r.yr)===String(selYr));});
+  arr.push({
+    id:oid+'|'+selMon+'|'+selYr,
+    outletId:oid,outletName:outlet.name||oid,
+    mon:selMon,yr:selYr,
+    oparts:oparts,ooil:ooil,
+    by:CU.name,byRole:CU.role,
+    at:new Date().toISOString()
+  });
+  saveOpeningStock(arr);
+  toast('✅ Opening stock saved');
+  refreshOSCard();
+}
+
+// RM Opening Stock edit panel
+function initRMOSPanel(){
+  var panel=document.getElementById('rm-os-panel');
+  if(!panel)return;
+  if(!CU||!['RM','ZM'].includes(CU.role)){panel.style.display='none';return;}
+  panel.style.display='';
+
+  // Populate SE filter (only SEs under this RM)
+  var seEl=document.getElementById('ros-se');
+  seEl.innerHTML='<option value="">All SE</option>';
+  var myDealers=dealers.filter(function(d){
+    if(CU.role==='ZM')return !d.isASK&&!d.isKPD;
+    return (d.rm||'').toLowerCase()===CU.name.toLowerCase()&&!d.isASK&&!d.isKPD;
+  });
+  var ses=[]; myDealers.forEach(function(d){if(d.se&&ses.indexOf(d.se)<0)ses.push(d.se);});
+  ses.sort().forEach(function(se){seEl.innerHTML+='<option>'+se+'</option>';});
+
+  // Set month/year to current
+  var mEl=document.getElementById('ros-mon'),yEl=document.getElementById('ros-yr');
+  if(mEl)mEl.value=selMon;if(yEl)yEl.value=selYr;
+
+  loadROSDealers();
+}
+
+function loadROSDealers(){
+  var se=v('ros-se');
+  var outEl=document.getElementById('ros-outlet');
+  outEl.innerHTML='<option value="">Select dealer…</option>';
+  dealers.filter(function(d){
+    if(d.isASK||d.isKPD)return false;
+    if(CU.role==='RM'&&(d.rm||'').toLowerCase()!==CU.name.toLowerCase())return false;
+    if(se&&d.se!==se)return false;
+    return true;
+  }).sort(function(a,b){return a.name.localeCompare(b.name);})
+  .forEach(function(d){outEl.innerHTML+='<option value="'+d.id+'">'+d.name+' ('+d.se+')</option>';});
+  document.getElementById('ros-result').innerHTML='';
+}
+
+function loadROSEntry(){
+  var oid=v('ros-outlet'),mon=v('ros-mon'),yr=v('ros-yr');
+  var res=document.getElementById('ros-result');
+  if(!oid){res.innerHTML='<div style="color:#ef4444;font-size:12px">Select a dealer first.</div>';return;}
+  var outlet=dealers.find(function(d){return d.id===oid;})||{};
+  var rec=getOSRecord(oid,mon,yr);
+  var parts=rec?rec.oparts:0, oil=rec?rec.ooil:0;
+  res.innerHTML='<div style="background:#f7f9ff;border-radius:10px;padding:12px;border:1px solid #e0e7ff">'+
+    '<div style="font-size:12px;font-weight:700;color:#1F3864;margin-bottom:8px">'+outlet.name+' — '+mon+' '+yr+'</div>'+
+    (rec?'<div style="font-size:11px;color:#6b7280;margin-bottom:8px">Last saved by '+rec.by+' on '+rec.at.split('T')[0]+'</div>':'<div style="font-size:11px;color:#f59e0b;margin-bottom:8px">⚠ No opening stock submitted yet for this month.</div>')+
+    '<div class="kg" style="margin-bottom:10px">'+
+    '<div class="ki"><label>Opening Parts Stock (₹L)</label><input type="number" id="ros-parts-val" value="'+(parts||0)+'" step="0.01" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:14px"></div>'+
+    '<div class="ki"><label>Opening Oil Stock (₹L)</label><input type="number" id="ros-oil-val" value="'+(oil||0)+'" step="0.01" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:14px"></div>'+
+    '</div>'+
+    '<button class="btn bp bfw" onclick="saveROSEntry(\''+oid+'\',\''+mon+'\',\''+yr+'\')">💾 Save (RM Override)</button>'+
+    '</div>';
+}
+
+async function saveROSEntry(oid,mon,yr){
+  var oparts=parseFloat(document.getElementById('ros-parts-val').value)||0;
+  var ooil=parseFloat(document.getElementById('ros-oil-val').value)||0;
+  if(!await showConfirm('Save opening stock for this dealer? This will override any existing entry.'))return;
+  var outlet=dealers.find(function(d){return d.id===oid;})||{};
+  var arr=getOpeningStock().filter(function(r){return!(r.outletId===oid&&r.mon===mon&&String(r.yr)===String(yr));});
+  arr.push({
+    id:oid+'|'+mon+'|'+yr,
+    outletId:oid,outletName:outlet.name||oid,
+    mon:mon,yr:yr,
+    oparts:oparts,ooil:ooil,
+    by:CU.name+'(RM)',byRole:CU.role,
+    at:new Date().toISOString()
+  });
+  saveOpeningStock(arr);
+  toast('✅ Opening stock updated');
+  loadROSEntry(); // reload to show updated values
 }
 
 // -- STATUS BOARD -----------------------------------------
