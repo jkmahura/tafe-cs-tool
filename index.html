@@ -1294,17 +1294,18 @@ tr:last-child td{border-bottom:none}
           <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb">Formula</th>
         </tr></thead>
         <tbody>
-          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">SL (Service Labour)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD SL ÷ SE's SL Target) × 10</td></tr>
-          <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">Revenue (₹L)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD Rev ÷ SE's Rev Target) × 10</td></tr>
-          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">Secondary Offtake<br><span style="font-size:10px;color:#6b7280">(S.Oil + S.Parts ₹L)</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(MTD Sec.Off ÷ SE's Sec Target) × 25</td></tr>
-          <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">EW (Extended Warranty)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">20 pts</td><td style="padding:6px 8px;color:#374151">(MTD EW ÷ SE's EW Target) × 20</td></tr>
-          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">🔥 HP (Hot Prospect)<br><span style="font-size:10px;color:#16a34a">Target provided in sheet</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD HP ÷ SE's HP Target) × 10<br><span style="font-size:10px;color:#6b7280">Falls back to relative if no target in sheet</span></td></tr>
-          <tr style="background:#fafafa"><td style="padding:6px 8px">🎪 FA (Field Activity)<br><span style="font-size:10px;color:#16a34a">Target provided in sheet</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(MTD FA ÷ SE's FA Target) × 25<br><span style="font-size:10px;color:#6b7280">Falls back to relative if no target in sheet</span></td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">SL (Service Labour)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD SL ÷ MTD SL Target) × 10</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">Revenue (₹L)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD Rev ÷ MTD Rev Target) × 10</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">Secondary Offtake<br><span style="font-size:10px;color:#6b7280">(S.Oil + S.Parts ₹L)</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(MTD Sec.Off ÷ MTD Sec Target) × 25</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa"><td style="padding:6px 8px">EW (Extended Warranty)</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">20 pts</td><td style="padding:6px 8px;color:#374151">(MTD EW ÷ MTD EW Target) × 20</td></tr>
+          <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px 8px">🔥 HP (Hot Prospect)<br><span style="font-size:10px;color:#16a34a">Target provided in sheet</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">10 pts</td><td style="padding:6px 8px;color:#374151">(MTD HP ÷ MTD HP Target) × 10<br><span style="font-size:10px;color:#6b7280">Falls back to relative if no target in sheet</span></td></tr>
+          <tr style="background:#fafafa"><td style="padding:6px 8px">🎪 FA (Field Activity)<br><span style="font-size:10px;color:#16a34a">Target provided in sheet</span></td><td style="padding:6px 8px;text-align:center;font-weight:700;color:#1F3864">25 pts</td><td style="padding:6px 8px;color:#374151">(MTD FA ÷ MTD FA Target) × 25<br><span style="font-size:10px;color:#6b7280">Falls back to relative if no target in sheet</span></td></tr>
         </tbody>
       </table>
       <div style="margin-top:12px;padding:10px 12px;background:#fef3c7;border-radius:8px;border-left:3px solid #d97706;font-size:12px;color:#92400e">
         <strong>Key rules:</strong><br>
-        • SE's target = sum of dealer-level targets for all dealers assigned to that SE<br>
+        • MTD Target = Monthly Target × (days elapsed ÷ days in month) — scales daily so it's fair on day 5 and day 25<br>
+        • SE's MTD target = sum of dealer-level MTD targets for all dealers assigned to that SE<br>
         • Score is capped at the weight even if SE beats the target — focus on all params, not just one (e.g. 110% achievement still = 10 pts on a 10-pt param)<br>
         • In case of a tie on total score, EW (Extended Warranty) score is the tiebreaker<br>
         • HP &amp; FA use target-based scoring when targets are in the month's sheet; relative (÷ zone best) otherwise<br>
@@ -5277,21 +5278,45 @@ function _seCompGetData(mon,yr){
   if(!seList.length){dealers.forEach(function(d){if(d.se&&seList.indexOf(d.se)<0)seList.push(d.se);});}
   seList.sort();
 
-  // Build SE → target totals (from MASTER_TARGETS, summed across dealer-level targets for this SE)
+  // MTD target ratio: days elapsed this month / total days in month
+  // For past months (fully elapsed) ratio = 1.0 (use full monthly target)
+  // For current month: ratio = dayOfMonth / daysInMonth
+  var monIdx=MONTHS.indexOf(mon); // 0=Apr ... 11=Mar (fiscal), need calendar month
+  // Map fiscal month name to calendar month index (0=Jan..11=Dec)
+  var calMonIdx=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'].indexOf(mon);
+  var calMon=calMonIdx>=0?(calMonIdx+3)%12:new Date().getMonth(); // 0=Jan..11=Dec
+  var calYrNum=parseInt(yr,10)||(new Date().getFullYear());
+  // Adjust year: Jan/Feb/Mar belong to next calendar year in fiscal context
+  if(calMon<=2)calYrNum+=1; // Jan(0),Feb(1),Mar(2) are in yr+1 calendar
+  var daysInMon=new Date(calYrNum,calMon+1,0).getDate(); // last day of month
+  var now=new Date();
+  var curCalMon=now.getMonth(),curCalYr=now.getFullYear();
+  var mtdRatio;
+  if(calYrNum<curCalYr||(calYrNum===curCalYr&&calMon<curCalMon)){
+    mtdRatio=1; // past month — full target
+  } else if(calYrNum===curCalYr&&calMon===curCalMon){
+    mtdRatio=Math.min(1,now.getDate()/daysInMon); // current month
+  } else {
+    mtdRatio=1; // future month — treat as full (edge case)
+  }
+
+  // Build SE → MTD target totals (monthly target × MTD ratio)
   // hp and fa targets are optional — present in Nov 2026+ target sheets; absent = relative scoring used
   var seTgt={};
   seList.forEach(function(se){seTgt[se]={sl:0,rev:0,sec:0,ew:0,hp:0,fa:0,hasHPTgt:false,hasFATgt:false};});
   dealers.forEach(function(d){
     var se=d.se;if(!se||!seTgt[se])return;
     var t=getTarget('dealer',d.id,mon,yr)||getTarget('dealer',d.code,mon,yr)||{};
-    seTgt[se].sl+=(parseFloat(t.sl)||0);
-    seTgt[se].rev+=(parseFloat(t.rev)||0);
-    seTgt[se].sec+=(parseFloat(t.soil)||0)+(parseFloat(t.sparts)||0);
-    seTgt[se].ew+=(parseFloat(t.ew)||0);
+    seTgt[se].sl+=((parseFloat(t.sl)||0)*mtdRatio);
+    seTgt[se].rev+=((parseFloat(t.rev)||0)*mtdRatio);
+    seTgt[se].sec+=((parseFloat(t.soil)||0)+(parseFloat(t.sparts)||0))*mtdRatio;
+    seTgt[se].ew+=((parseFloat(t.ew)||0)*mtdRatio);
     // HP and FA targets — present only when provided in that month's target sheet
-    if(t.hp!=null&&t.hp!==undefined){seTgt[se].hp+=(parseFloat(t.hp)||0);seTgt[se].hasHPTgt=true;}
-    if(t.fa!=null&&t.fa!==undefined){seTgt[se].fa+=(parseFloat(t.fa)||0);seTgt[se].hasFATgt=true;}
+    if(t.hp!=null&&t.hp!==undefined){seTgt[se].hp+=((parseFloat(t.hp)||0)*mtdRatio);seTgt[se].hasHPTgt=true;}
+    if(t.fa!=null&&t.fa!==undefined){seTgt[se].fa+=((parseFloat(t.fa)||0)*mtdRatio);seTgt[se].hasFATgt=true;}
   });
+  // Expose ratio for display
+  var mtdDays=Math.round(mtdRatio*daysInMon),mtdPct=Math.round(mtdRatio*100);
 
   // Build SE → actuals (MTD from entries for this month)
   var seAct={};
@@ -5345,7 +5370,7 @@ function _seCompGetData(mon,yr){
       ew:a.ew,ewT:t.ew,ewPct:pct(a.ew,t.ew,true),ewS:Math.round(ewS*10)/10,
       hp:a.hp,hpT:t.hp,hpPct:pct(a.hp,t.hp,hpHasTgt),hpS:Math.round(hpS*10)/10,hpHasTgt:hpHasTgt,
       fa:a.fa,faT:t.fa,faPct:pct(a.fa,t.fa,faHasTgt),faS:Math.round(faS*10)/10,faHasTgt:faHasTgt,
-      visits:a.visits
+      visits:a.visits,mtdDays:mtdDays,mtdPct:mtdPct,daysInMon:daysInMon
     };
   }).filter(function(r){return r.visits>0||r.sl>0||r.hp>0||r.fa>0;})
    .sort(function(a,b){var sd=b.score-a.score;return sd!==0?sd:(b.ewS-a.ewS);});
@@ -5399,10 +5424,11 @@ function renderSECompetition(mon,yr){
     '<th style="padding:6px 6px;text-align:center">🔥HP<br><span style="opacity:.7">10pt</span></th>'+
     '<th style="padding:6px 6px;text-align:center">🎪FA<br><span style="opacity:.7">25pt</span></th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    (ranked.length?'<div style="margin-top:6px;font-size:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:6px 10px;color:#1e40af">📅 MTD Target = Monthly Target × ('+ranked[0].mtdDays+' days elapsed ÷ '+ranked[0].daysInMon+' days in month) = <strong>'+ranked[0].mtdPct+'%</strong> of monthly target used as benchmark</div>':'')+
     '<div style="margin-top:8px;font-size:10px;color:#9ca3af;line-height:1.6">'+
-    '• SL / Rev / Sec.Offtake / EW: score = (MTD actual ÷ monthly target) × weight — capped at 2× weight max<br>'+
+    '• SL / Rev / Sec.Offtake / EW: score = (MTD actual ÷ MTD target) × weight, capped at weight<br>'+
     '• HP / FA: target-based when targets provided in sheet; else relative to zone best performer<br>'+
-    '• Max score = 100 (all 6 KPIs at 100% of target). Score is capped at max — beating target does not add extra points. Tie on total score → EW score decides rank.</div>';
+    '• Max score = 100. Beating target does not add extra points. Tie → EW score decides rank.</div>';
 }
 
 // Dedicated Competition page renderer
