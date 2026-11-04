@@ -298,6 +298,8 @@ tr:last-child td{border-bottom:none}
         <div class="ki"><label>Svc Mkt Share %</label><input type="number" id="kpi-sms" placeholder="0.0" step="0.1" max="100"></div>
         <div class="ki"><label>Svc Retention %</label><input type="number" id="kpi-sret" placeholder="0.0" step="0.1" max="100"></div>
         <div class="ki" style="grid-column:1/-1"><label>Vehicles in Field (7yr Population)</label><input type="number" id="kpi-vif" placeholder="0"></div>
+        <div class="ki"><label>🎯 HP (High Prospect)</label><input type="number" id="kpi-hp" placeholder="0" min="0" title="No. of high-prospect tractors identified this visit"></div>
+        <div class="ki"><label>🎪 FA (Field Activity)</label><input type="number" id="kpi-fa" placeholder="0" min="0" title="No. of field activity events conducted"></div>
       </div>
       </div><!-- /monthly-kpi-block -->
     </div>
@@ -1191,6 +1193,20 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
+    <!-- SE Competition -->
+    <div class="card">
+      <div class="ch" style="background:#7030A0;color:#fff">🏆 SE Competition Leaderboard</div>
+      <div class="cb">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <select id="an-comp-mon" onchange="document.getElementById('an-comp-body').innerHTML=renderSECompetition(this.value,2026)" style="padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+            <option>Apr</option><option>May</option><option>Jun</option><option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option selected>Nov</option><option>Dec</option>
+          </select>
+          <span style="font-size:11px;color:#6b7280">Select month to see rankings</span>
+        </div>
+        <div id="an-comp-body" style="font-size:12px"></div>
+      </div>
+    </div>
+
     <!-- Hierarchy change log -->
     <div class="card">
       <div class="ch or">🔄 Hierarchy Change Log</div>
@@ -1842,8 +1858,10 @@ function tvaRows(label,a,t,tabType,bg){
   var nd='<td class="sc" style="background:'+bg2+';padding:5px 8px;font-size:12px;border-right:3px solid #c7d2fe;min-width:120px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>'+label+'</strong></td>';
   if(isKPD){
     var aPtotK=(a.poil||0)+(a.pparts||0), tPtotK=(t.poil||0)+(t.pparts||0);
+    var aStotK=(a.soil||0)+(a.sparts||0), tStotK=(t.soil||0)+(t.sparts||0);
     return'<tr style="background:'+bg2+';border-bottom:1px solid #e5e7eb">'+nd+
-      ct(tPtotK)+ca(aPtotK,tPtotK,'',false)+ct(t.poil)+ca(a.poil,t.poil,'',true)+ct(t.pparts)+ca(a.pparts,t.pparts,'',false)+'</tr>';
+      ct(tPtotK)+ca(aPtotK,tPtotK,'',true)+ct(t.poil)+ca(a.poil,t.poil,'',false)+ct(t.pparts)+ca(a.pparts,t.pparts,'',true)+
+      ct(tStotK)+ca(aStotK,tStotK,'',true)+ct(t.soil)+ca(a.soil,t.soil,'',false)+ct(t.sparts)+ca(a.sparts,t.sparts,'',false)+'</tr>';
   }
   if(tabType==='ask'){
     return'<tr style="background:'+bg2+';border-bottom:1px solid #e5e7eb">'+nd+
@@ -1884,7 +1902,7 @@ function tvaTotRow(label,totA,totT,tabType){
   }
   var style='background:var(--navy);color:#fff;font-weight:700';
   var nd='<td class="sc" style="background:var(--navy);color:#fff;padding:6px 8px;font-size:12px;border-right:3px solid rgba(255,255,255,.5);min-width:120px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+label+'</td>';
-  if(isKPD){var aPtotK=(totA.poil||0)+(totA.pparts||0),tPtotK=(totT.poil||0)+(totT.pparts||0);return'<tr style="'+style+'">'+nd+ct(tPtotK)+ca(aPtotK,tPtotK,'',false)+ct(totT.poil)+ca(totA.poil,totT.poil,'',true)+ct(totT.pparts)+ca(totA.pparts,totT.pparts,'',false)+'</tr>';}
+  if(isKPD){var aPtotK=(totA.poil||0)+(totA.pparts||0),tPtotK=(totT.poil||0)+(totT.pparts||0),aStotK=(totA.soil||0)+(totA.sparts||0),tStotK=(totT.soil||0)+(totT.sparts||0);return'<tr style="'+style+'">'+nd+ct(tPtotK)+ca(aPtotK,tPtotK,'',true)+ct(totT.poil)+ca(totA.poil,totT.poil,'',false)+ct(totT.pparts)+ca(totA.pparts,totT.pparts,'',true)+ct(tStotK)+ca(aStotK,tStotK,'',true)+ct(totT.soil)+ca(totA.soil,totT.soil,'',false)+ct(totT.sparts)+ca(totA.sparts,totT.sparts,'',false)+'</tr>';}
   if(tabType==='ask') return'<tr style="'+style+'">'+nd+ct(totT.sl,'int')+ca(totA.sl,totT.sl,'int',true)+'</tr>';
   if(tabType==='state'||tabType==='rm')
     return'<tr style="'+style+'">'+nd+
@@ -2332,16 +2350,18 @@ function renderDash(tab){
       rows.push({k:(d.isDirect?'⭐ ':'🏪 ')+d.name,a:getDealerTotal(d.id,selMon,selYr),t:dtgt});
     });
   }else if(tab==='kpd'){
-    // KPD tab: scope to current user's dealers
+    // KPD tab: KPD dealers + Direct dealers together
     dealers.filter(function(d){
-      if(!d.isKPD)return false;
+      if(!d.isKPD&&!d.isDirect)return false;
       if(role==='ZM')return true;
       if(role==='RM')return (d.rm||'').toLowerCase()===name.toLowerCase();
       if(role==='KM')return d.kpdMgr===name||d.am===name;
       return d.am===name||d.se===name;
     }).forEach(function(d){
       var ke=me.filter(function(e){return e.outletId===d.id;});
-      rows.push({k:'🏭 '+d.name,a:agg(ke),t:getTarget('kpd',d.id,selMon,selYr)});
+      var dlvl=d.isKPD?'kpd':'direct';
+      var tgt=getTarget(dlvl,d.id,selMon,selYr)||getTarget(dlvl,d.code,selMon,selYr)||getTarget('dealer',d.id,selMon,selYr)||{};
+      rows.push({k:(d.isKPD?'🏭 ':'⭐ ')+d.name,a:agg(ke),t:tgt,_isKPD:d.isKPD});
     });
   }else if(tab==='km'){
     // KPD Mgr view -- show all outlets where kpdMgr=name
@@ -2489,9 +2509,9 @@ function renderDash(tab){
   }
   var hdr,span;
   if(isKPD){
-    // P.Oil + P.Parts targets for KPD
-    hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('PRIMARY TOTAL',1,false)+thg('BREAKDOWN',2,false)+'</tr>'+
-        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('P')+thp('P.Oil')+thp('P.Parts')+'</tr>'; span=7;
+    // KPD+Direct tab: Primary Offtake + Secondary Offtake
+    hdr='<tr style="'+HS+'"><th '+NM+'>KPD / DIRECT</th>'+thg('PRIMARY TOTAL',1,true)+thg('PRIMARY BKDN',2,true)+thg('SECONDARY TOTAL',1,true)+thg('SEC BKDN',2,false)+'</tr>'+
+        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('P',true)+thp('P.Oil')+thp('P.Parts',true)+thp('S',true)+thp('S.Oil')+thp('S.Parts')+'</tr>'; span=13;
   }else if(tab==='ask'){
     hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',1,false)+'</tr>'+
         '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+'</tr>'; span=3;
@@ -3201,7 +3221,8 @@ async function submitEntry(){
       soil:isKPD||isASK?0:n('kpi-soil'),sparts:isKPD||isASK?0:n('kpi-sparts'),
       ew:isKPD||isASK?0:n('kpi-ew'),
       uc:isKPD||isASK?0:n('kpi-uc'),
-      sms:isKPD||isASK?0:n('kpi-sms'),sret:isKPD||isASK?0:n('kpi-sret'),vif:isKPD||isASK?0:n('kpi-vif')
+      sms:isKPD||isASK?0:n('kpi-sms'),sret:isKPD||isASK?0:n('kpi-sret'),vif:isKPD||isASK?0:n('kpi-vif'),
+      hp:isKPD||isASK?0:n('kpi-hp'),fa:isKPD||isASK?0:n('kpi-fa')
     },
     manpower:{req:n('mp-req'),avail:n('mp-avail'),trained:n('mp-trained'),untrained:n('mp-untrained')},
     highlight:v('e-highlight'),remarks:v('e-rem'),action:v('e-act'),nextVisit:v('e-nv'),
@@ -3253,7 +3274,7 @@ async function submitEntry(){
     toast(editId?'✅ Entry corrected!':'✅ Submitted!');
   }
   document.getElementById('entry-ok').textContent=(editId?'✅ Corrected at ':'✅ Saved at ')+new Date().toLocaleTimeString();
-  ['kpi-sl','kpi-ask-sl','kpi-fs','kpi-mj','kpi-rev','kpi-poil','kpi-pparts','kpi-poil2','kpi-pparts2','kpi-soil','kpi-sparts','kpi-ew','kpi-uc',
+  ['kpi-sl','kpi-ask-sl','kpi-fs','kpi-mj','kpi-rev','kpi-poil','kpi-pparts','kpi-poil2','kpi-pparts2','kpi-soil','kpi-sparts','kpi-ew','kpi-uc','kpi-hp','kpi-fa',
    'mp-req','mp-avail','mp-trained','mp-untrained','e-highlight','e-rem','e-act','e-nv'].forEach(function(fid){var el=document.getElementById(fid);if(el)el.value='';});
   clearImoRows();
   checkAlertDot();checkEntryAlert();
@@ -3471,6 +3492,7 @@ function loadEntryForEdit(entryId){
     sf('kpi-sl',k.sl);sf('kpi-ask-sl',k.sl);sf('kpi-fs',k.fs);sf('kpi-mj',k.mj);sf('kpi-rev',k.rev);
     sf('kpi-soil',k.soil);sf('kpi-sparts',k.sparts);sf('kpi-ew',k.ew);sf('kpi-uc',k.uc);
     sf('kpi-poil',k.poil);sf('kpi-pparts',k.pparts);sf('kpi-poil2',k.poil);sf('kpi-pparts2',k.pparts);
+    sf('kpi-hp',k.hp);sf('kpi-fa',k.fa);
     sf('mp-req',mp.req);sf('mp-avail',mp.avail);sf('mp-trained',mp.trained);sf('mp-untrained',mp.untrained);
     sf('e-highlight',e.highlight);sf('e-rem',e.remarks);sf('e-act',e.action);sf('e-nv',e.nextVisit);
     // Restore IMO rows
@@ -3529,7 +3551,7 @@ function clearEditEntry(){
   var btn=document.getElementById('entry-submit-btn');if(btn)btn.textContent='✅ Submit Daily Update';
   var cb=document.getElementById('entry-clear-btn');if(cb)cb.style.display='none';
   // Clear all fields
-  ['kpi-sl','kpi-ask-sl','kpi-fs','kpi-mj','kpi-rev','kpi-poil','kpi-pparts','kpi-poil2','kpi-pparts2','kpi-soil','kpi-sparts','kpi-ew','kpi-uc',
+  ['kpi-sl','kpi-ask-sl','kpi-fs','kpi-mj','kpi-rev','kpi-poil','kpi-pparts','kpi-poil2','kpi-pparts2','kpi-soil','kpi-sparts','kpi-ew','kpi-uc','kpi-hp','kpi-fa',
    'mp-req','mp-avail','mp-trained','mp-untrained','e-highlight','e-rem','e-act','e-nv'].forEach(function(fid){
     var el=document.getElementById(fid);if(el)el.value='';
   });
@@ -3773,7 +3795,12 @@ function renderStatus(){
              (e.by||'').toLowerCase()===sNameL;
     });
     var todayE=myE.filter(function(e){return e.date===today;});
-    var lastE=myE.slice().sort(function(a,b){return (b.at||0)-(a.at||0)||(b.date>a.date?1:b.date<a.date?-1:0);})[0];
+    // Sort by date string first (YYYY-MM-DD), then by at-timestamp as tiebreaker
+    var lastE=myE.slice().sort(function(a,b){
+      var da=a.date||'',db=b.date||'';
+      if(db>da)return 1;if(db<da)return -1;
+      return (b.at||0)-(a.at||0);
+    })[0];
     var inactive=s.isActive===false;
     var isToday=todayE.length>0;
     var status,stcl;
@@ -4919,6 +4946,11 @@ function renderAnalytics(){
     ' = <b style="color:'+(totAct/tgtByMonth[curMo]>=1?'#166534':'#991b1b')+'">'+
     Math.round(totAct/tgtByMonth[curMo]*100)+'%</b>':'');
 
+  // SE Competition
+  var compMon=document.getElementById('an-comp-mon');
+  var compBody=document.getElementById('an-comp-body');
+  if(compBody)compBody.innerHTML=renderSECompetition(compMon?compMon.value:curMo,2026);
+
   renderHierLog();
 }
 
@@ -4951,6 +4983,105 @@ function logHierChange(desc){
     if(log.length>200)log=log.slice(-200);
     localStorage.setItem('hier_change_log',JSON.stringify(log));
   }catch(ex){}
+}
+
+// -- SE COMPETITION ---------------------------------------
+// Weightage: SL=10%, Rev=10%, SecOfftake(oil+parts)=25%, EW=20%, HP=10%, FA=25%
+var SE_COMP_W={sl:10,rev:10,sec:25,ew:20,hp:10,fa:25};
+function renderSECompetition(mon,yr){
+  mon=mon||getCurrentMonth();yr=yr||2026;
+  var MONTHS=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  if(!mon)mon=MONTHS[new Date().getMonth()];
+
+  // Gather SE list from hierarchy
+  var seList=[];
+  hier.forEach(function(h){if(h.role==='SE'&&h.isActive!==false)seList.push(h.name);});
+  if(!seList.length){
+    dealers.forEach(function(d){if(d.se&&seList.indexOf(d.se)<0)seList.push(d.se);});
+  }
+  seList.sort();
+
+  // Build SE totals for the month
+  var seTotals={};
+  seList.forEach(function(se){
+    seTotals[se]={sl:0,rev:0,soil:0,sparts:0,ew:0,hp:0,fa:0,outlets:0};
+  });
+  entries.forEach(function(e){
+    if(e.month!==mon)return;
+    var se=e.se||e.byName||e.by||'';
+    if(!se||!seTotals[se])return;
+    var t=seTotals[se];
+    var k=e.kpi||e;
+    t.sl+=(parseFloat(k.sl)||0);
+    t.rev+=(parseFloat(k.rev)||0);
+    t.soil+=(parseFloat(k.soil)||0);
+    t.sparts+=(parseFloat(k.sparts)||0);
+    t.ew+=(parseFloat(k.ew)||0);
+    t.hp+=(parseFloat(k.hp)||0);
+    t.fa+=(parseFloat(k.fa)||0);
+    t.outlets++;
+  });
+
+  // Get zone totals for relative scoring (max = zone total, score = SE/max * weight)
+  var maxSE={sl:0,rev:0,sec:0,ew:0,hp:0,fa:0};
+  seList.forEach(function(se){
+    var t=seTotals[se];
+    t.sec=(t.soil||0)+(t.sparts||0);
+    maxSE.sl=Math.max(maxSE.sl,t.sl);
+    maxSE.rev=Math.max(maxSE.rev,t.rev);
+    maxSE.sec=Math.max(maxSE.sec,t.sec);
+    maxSE.ew=Math.max(maxSE.ew,t.ew);
+    maxSE.hp=Math.max(maxSE.hp,t.hp);
+    maxSE.fa=Math.max(maxSE.fa,t.fa);
+  });
+
+  // Score each SE (proportional to best performer)
+  var ranked=seList.map(function(se){
+    var t=seTotals[se];
+    var score=0;
+    if(maxSE.sl>0)score+=SE_COMP_W.sl*(t.sl/maxSE.sl);
+    if(maxSE.rev>0)score+=SE_COMP_W.rev*(t.rev/maxSE.rev);
+    if(maxSE.sec>0)score+=SE_COMP_W.sec*(t.sec/maxSE.sec);
+    if(maxSE.ew>0)score+=SE_COMP_W.ew*(t.ew/maxSE.ew);
+    if(maxSE.hp>0)score+=SE_COMP_W.hp*(t.hp/maxSE.hp);
+    if(maxSE.fa>0)score+=SE_COMP_W.fa*(t.fa/maxSE.fa);
+    return{name:se,score:Math.round(score*10)/10,sl:t.sl,rev:t.rev,sec:t.sec,ew:t.ew,hp:t.hp,fa:t.fa,outlets:t.outlets};
+  }).filter(function(r){return r.outlets>0||r.sl>0||r.hp>0||r.fa>0;})
+    .sort(function(a,b){return b.score-a.score;});
+
+  if(!ranked.length)return'<div style="color:#aaa;padding:16px">No entry data for '+mon+'. Submit entries or push historical data first.</div>';
+
+  var MEDALS=['🥇','🥈','🥉'];
+  var rows=ranked.map(function(r,i){
+    var medal=i<3?MEDALS[i]:(i+1)+'.';
+    var scoreBar='<div style="height:6px;border-radius:3px;background:#e5e7eb;margin-top:3px"><div style="height:6px;border-radius:3px;background:'+(i===0?'#1F3864':i===1?'#4472C4':'#70AD47')+';width:'+Math.min(100,r.score)+'%"></div></div>';
+    return'<tr style="background:'+(i%2?'#f7f9ff':'#fff')+';border-bottom:1px solid #e5e7eb">'+
+      '<td style="padding:8px 10px;font-size:13px;font-weight:700">'+medal+'</td>'+
+      '<td style="padding:8px 10px;font-size:13px"><strong>'+r.name+'</strong>'+scoreBar+'</td>'+
+      '<td style="padding:8px 6px;text-align:center;font-size:13px;font-weight:700;color:#1F3864">'+r.score+'</td>'+
+      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.sl+'</td>'+
+      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.rev.toFixed(1)+'</td>'+
+      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.sec.toFixed(1)+'</td>'+
+      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.ew+'</td>'+
+      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.hp+'</td>'+
+      '<td style="padding:8px 6px;text-align:center;font-size:12px">'+r.fa+'</td>'+
+      '</tr>';
+  }).join('');
+
+  return'<div style="margin-bottom:8px;font-size:11px;color:#6b7280">'+
+    'Score = SL(10%) + Rev(10%) + Sec.Offtake(25%) + EW(20%) + HP(10%) + FA(25%) — relative to best in zone</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:500px">'+
+    '<thead><tr style="background:#1F3864;color:#fff">'+
+    '<th style="padding:8px 6px;text-align:left">#</th>'+
+    '<th style="padding:8px 10px;text-align:left">SE Name</th>'+
+    '<th style="padding:8px 6px;text-align:center">Score</th>'+
+    '<th style="padding:8px 6px;text-align:center">SL<br><span style="font-weight:400;font-size:9px">10%</span></th>'+
+    '<th style="padding:8px 6px;text-align:center">Rev(L)<br><span style="font-weight:400;font-size:9px">10%</span></th>'+
+    '<th style="padding:8px 6px;text-align:center">Sec.Off<br><span style="font-weight:400;font-size:9px">25%</span></th>'+
+    '<th style="padding:8px 6px;text-align:center">EW<br><span style="font-weight:400;font-size:9px">20%</span></th>'+
+    '<th style="padding:8px 6px;text-align:center">HP<br><span style="font-weight:400;font-size:9px">10%</span></th>'+
+    '<th style="padding:8px 6px;text-align:center">FA<br><span style="font-weight:400;font-size:9px">25%</span></th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 // -- ZM TOOLS ---------------------------------------------
