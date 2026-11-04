@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v100</title>
+<title>TAFE East Zone – CS Field Tool v101</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2150,7 +2150,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v100';
+    if(tsub)tsub.textContent='CS Field Tool v101';
   }catch(e){}
 
   // Step 3: Set dates
@@ -2498,7 +2498,9 @@ function renderDash(tab){
       var rmDealers=dealers.filter(function(d){return (d.rm||'').toLowerCase()===name.toLowerCase();});
       if(tab==='am'){
         allowedNames={};
-        rmDealers.forEach(function(d){if(d.am)allowedNames[d.am.toLowerCase()]=d.am;});
+        // Only include people whose role in hierarchy is AM (exclude SEs mistakenly listed as am on a dealer)
+        var amRoles={};hier.forEach(function(p){if(p.role==='AM'&&p.isActive!==false)amRoles[p.name.toLowerCase()]=p.name;});
+        rmDealers.forEach(function(d){if(d.am&&amRoles[d.am.toLowerCase()])allowedNames[d.am.toLowerCase()]=d.am;});
       }else if(tab==='se'){
         allowedNames={};
         rmDealers.forEach(function(d){if(d.se)allowedNames[d.se.toLowerCase()]=d.se;});
