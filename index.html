@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v107</title>
+<title>TAFE East Zone – CS Field Tool v108</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1465,6 +1465,8 @@ function doPost(e) {
           sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
         }
       }
+      // Idempotent: skip if this exact EntryId already exists in the Sheet
+      if (data.id &amp;&amp; findRowById(sheet, data.id) !== -1) return ok();
       // Mark the old row as not-final (preserve audit trail, don't delete)
       if (data._replaces) {
         var found = findRowById(sheet, data._replaces);
@@ -1548,6 +1550,8 @@ function doGet(e) {
           sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
         }
       }
+      // Idempotent: skip if this exact EntryId already exists in the Sheet
+      if (data.id &amp;&amp; findRowById(sheet, data.id) !== -1) return ok();
       if (data._replaces) {
         var found = findRowById(sheet, data._replaces);
         if (found !== -1 &amp;&amp; found.finalCol > 0)
@@ -2250,7 +2254,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v107';
+    if(tsub)tsub.textContent='CS Field Tool v108';
   }catch(e){}
 
   // Step 3: Set dates
