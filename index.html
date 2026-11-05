@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v102</title>
+<title>TAFE East Zone – CS Field Tool v103</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1448,7 +1448,7 @@ function doPost(e) {
       var HEADERS = ['Date','Month','Year','OutletId','OutletName','OutletType',
         'State','RM','AM','SE','SubmittedBy','EmpId','Role','OnBehalfOf',
         'SL','FS','MJ','Revenue','POil','PParts','SOil','SParts','EW','UC',
-        'SMS%','Retention%','VIF','MPReq','MPAvail','Trained','Untrained',
+        'SMS%','Retention%','VIF','HP','FA','MPReq','MPAvail','Trained','Untrained',
         'Highlight','Remarks','Action','NextVisit','IMOCount',
         'EntryId','ReplacesId','IsFinal','Timestamp'];
       // Always ensure header row matches — fixes column mismatch from old GAS versions
@@ -1478,7 +1478,7 @@ function doPost(e) {
         data.by, data.byEid||'', data.byRole, data.onBehalfOf||'',
         k.sl||0, k.fs||0, k.mj||0, k.rev||0, k.poil||0, k.pparts||0,
         k.soil||0, k.sparts||0, k.ew||0, k.uc||0,
-        k.sms||0, k.sret||0, k.vif||0,
+        k.sms||0, k.sret||0, k.vif||0, k.hp||0, k.fa||0,
         mp.req||0, mp.avail||0, mp.trained||0, mp.untrained||0,
         data.highlight||'', data.remarks||'', data.action||'',
         data.nextVisit||'', (data.imo||[]).length,
@@ -1533,7 +1533,7 @@ function doGet(e) {
       var HEADERS = ['Date','Month','Year','OutletId','OutletName','OutletType',
         'State','RM','AM','SE','SubmittedBy','EmpId','Role','OnBehalfOf',
         'SL','FS','MJ','Revenue','POil','PParts','SOil','SParts','EW','UC',
-        'SMS%','Retention%','VIF','MPReq','MPAvail','Trained','Untrained',
+        'SMS%','Retention%','VIF','HP','FA','MPReq','MPAvail','Trained','Untrained',
         'Highlight','Remarks','Action','NextVisit','IMOCount',
         'EntryId','ReplacesId','IsFinal','Timestamp'];
       if (sheet.getLastRow() === 0) {
@@ -1560,7 +1560,7 @@ function doGet(e) {
         data.by, data.byEid||'', data.byRole, data.onBehalfOf||'',
         k.sl||0, k.fs||0, k.mj||0, k.rev||0, k.poil||0, k.pparts||0,
         k.soil||0, k.sparts||0, k.ew||0, k.uc||0,
-        k.sms||0, k.sret||0, k.vif||0,
+        k.sms||0, k.sret||0, k.vif||0, k.hp||0, k.fa||0,
         mp.req||0, mp.avail||0, mp.trained||0, mp.untrained||0,
         data.highlight||'', data.remarks||'', data.action||'',
         data.nextVisit||'', (data.imo||[]).length,
@@ -2179,7 +2179,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v102';
+    if(tsub)tsub.textContent='CS Field Tool v103';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3340,8 +3340,9 @@ async function submitEntry(){
     if(vFS>vSL){toast('❌ Free Service ('+vFS+') cannot exceed SL ('+vSL+'). Please correct.');return;}
     if(vMJ>vSL){toast('❌ Major Job ('+vMJ+') cannot exceed SL ('+vSL+'). Please correct.');return;}
     if(vFS+vMJ>vSL){toast('❌ FS ('+vFS+') + MJ ('+vMJ+') = '+(vFS+vMJ)+' exceeds SL ('+vSL+'). Please correct.');return;}
-    // Cumulative check: KPI values cannot decrease from previous entry for same outlet
-    var prevE=entries.filter(function(e){return e.outletId===oid&&e.date<date&&e.isFinal!==false;}).sort(function(a,b){return b.date.localeCompare(a.date)||b.at-a.at;});
+    // Cumulative check: KPI values cannot decrease from previous entry for SAME outlet AND SAME month
+    // (mon/yr already computed above from the selected date)
+    var prevE=entries.filter(function(e){return e.outletId===oid&&e.date<date&&e.isFinal!==false&&e.month===mon&&e.year===yr;}).sort(function(a,b){return b.date.localeCompare(a.date)||b.at-a.at;});
     if(prevE.length){
       var prev=prevE[0].kpi||{};
       var decreases=[];
