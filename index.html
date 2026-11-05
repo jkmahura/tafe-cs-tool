@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v108</title>
+<title>TAFE East Zone – CS Field Tool v109</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2254,7 +2254,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v108';
+    if(tsub)tsub.textContent='CS Field Tool v109';
   }catch(e){}
 
   // Step 3: Set dates
@@ -2354,7 +2354,14 @@ function nav(p){
   document.querySelectorAll('.bni').forEach(function(b){b.classList.toggle('on',b.dataset.p===p);});
   // Page-specific init
   if(p==='entry'){setupEntryType();checkEntryAlert();setTimeout(renderTodayEntries,200);setTimeout(initRMEntryPanel,300);setTimeout(initRMOSPanel,300);refreshOSCard();}
-  if(p==='status')renderStatus();
+  if(p==='status'){
+    renderStatus();
+    // Refresh from Sheet so ZM/RM sees all SEs' submissions, not just local device entries
+    if(GSURL){
+      try{autoPullFromSheet();}catch(e){}
+      setTimeout(function(){try{renderStatus();}catch(e){}},3000);
+    }
+  }
   if(p==='targets'){loadTgtEnt();checkTgtLock();}
   if(p==='master')renderMaster();
   if(p==='hier'){hierTab('add',document.querySelector('#hier-tabs .tab'));renderHierList();}
