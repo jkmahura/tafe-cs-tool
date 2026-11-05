@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v103</title>
+<title>TAFE East Zone – CS Field Tool v104</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1568,6 +1568,39 @@ function doGet(e) {
       return ok();
     }
 
+    // Opening stock via GET (same logic as doPost)
+    if (action === 'openstock') {
+      var raw2 = (e.parameter && e.parameter.payload) || '{}';
+      var data2 = JSON.parse(raw2);
+      var osSheet2 = ss.getSheetByName('OpeningStock') || ss.insertSheet('OpeningStock');
+      var OS_HDR2 = ['OutletId','OutletName','Month','Year','OParts','OOil','SubmittedBy','Role','Timestamp','EntryId'];
+      if (osSheet2.getLastRow() === 0) {
+        osSheet2.appendRow(OS_HDR2);
+      } else {
+        var exHdr2 = osSheet2.getRange(1,1,1,osSheet2.getLastColumn()).getValues()[0];
+        var needH2 = exHdr2.length !== OS_HDR2.length || OS_HDR2.some(function(h,i){return String(exHdr2[i]||'')!==h;});
+        if (needH2) {
+          if (osSheet2.getLastColumn() < OS_HDR2.length)
+            osSheet2.getRange(1,osSheet2.getLastColumn()+1,1,OS_HDR2.length-osSheet2.getLastColumn()).setValues([OS_HDR2.slice(osSheet2.getLastColumn())]);
+          osSheet2.getRange(1,1,1,OS_HDR2.length).setValues([OS_HDR2]);
+        }
+      }
+      var osHdrs2 = osSheet2.getRange(1,1,1,osSheet2.getLastColumn()).getValues()[0]
+        .map(function(h){return String(h).toLowerCase().replace(/[^a-z0-9]/g,'');});
+      var oIdCol2=osHdrs2.indexOf('outletid'),oMonCol2=osHdrs2.indexOf('month'),oYrCol2=osHdrs2.indexOf('year');
+      if (osSheet2.getLastRow()>1 && oIdCol2>=0 && oMonCol2>=0 && oYrCol2>=0) {
+        var osRows2=osSheet2.getRange(2,1,osSheet2.getLastRow()-1,osSheet2.getLastColumn()).getValues();
+        for(var ri2=0;ri2<osRows2.length;ri2++){
+          if(String(osRows2[ri2][oIdCol2])===String(data2.outletId)&&String(osRows2[ri2][oMonCol2])===String(data2.mon)&&String(osRows2[ri2][oYrCol2])===String(data2.yr)){
+            osSheet2.deleteRow(ri2+2); break;
+          }
+        }
+      }
+      osSheet2.appendRow([data2.outletId,data2.outletName||'',data2.mon,data2.yr,
+        data2.oparts||0,data2.ooil||0,data2.by||'',data2.byRole||'',new Date(),data2.id||'']);
+      return ok();
+    }
+
     if (action === 'pull' || action === 'json') {
       var sheet = ss.getSheetByName('Entries');
       if (!sheet || sheet.getLastRow() &lt; 2) return ok([]);
@@ -1615,6 +1648,38 @@ function doGet(e) {
           };
         });
       return ok(entries);
+    }
+
+    // -- OPENING STOCK: save one record per dealer per month
+    if (action === 'openstock') {
+      var osSheet = ss.getSheetByName('OpeningStock') || ss.insertSheet('OpeningStock');
+      var OS_HDR = ['OutletId','OutletName','Month','Year','OParts','OOil','SubmittedBy','Role','Timestamp','EntryId'];
+      if (osSheet.getLastRow() === 0) {
+        osSheet.appendRow(OS_HDR);
+      } else {
+        var exHdr = osSheet.getRange(1,1,1,osSheet.getLastColumn()).getValues()[0];
+        var needH = exHdr.length !== OS_HDR.length || OS_HDR.some(function(h,i){return String(exHdr[i]||'')!==h;});
+        if (needH) {
+          if (osSheet.getLastColumn() < OS_HDR.length)
+            osSheet.getRange(1,osSheet.getLastColumn()+1,1,OS_HDR.length-osSheet.getLastColumn()).setValues([OS_HDR.slice(osSheet.getLastColumn())]);
+          osSheet.getRange(1,1,1,OS_HDR.length).setValues([OS_HDR]);
+        }
+      }
+      // Overwrite existing row for same OutletId+Month+Year if present
+      var osHdrs = osSheet.getRange(1,1,1,osSheet.getLastColumn()).getValues()[0]
+        .map(function(h){return String(h).toLowerCase().replace(/[^a-z0-9]/g,'');});
+      var oIdCol=osHdrs.indexOf('outletid'), oMonCol=osHdrs.indexOf('month'), oYrCol=osHdrs.indexOf('year');
+      if (osSheet.getLastRow()>1 && oIdCol>=0 && oMonCol>=0 && oYrCol>=0) {
+        var osRows=osSheet.getRange(2,1,osSheet.getLastRow()-1,osSheet.getLastColumn()).getValues();
+        for(var ri=0;ri<osRows.length;ri++){
+          if(String(osRows[ri][oIdCol])===String(data.outletId)&&String(osRows[ri][oMonCol])===String(data.mon)&&String(osRows[ri][oYrCol])===String(data.yr)){
+            osSheet.deleteRow(ri+2); break;
+          }
+        }
+      }
+      osSheet.appendRow([data.outletId,data.outletName||'',data.mon,data.yr,
+        data.oparts||0,data.ooil||0,data.by||'',data.byRole||'',new Date(),data.id||'']);
+      return ok();
     }
 
     // -- DEDUPE: mark duplicate rows IsFinal=FALSE, keep only latest per OutletId+Date+SubmittedBy
@@ -2179,7 +2244,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v103';
+    if(tsub)tsub.textContent='CS Field Tool v104';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3781,8 +3846,24 @@ async function submitOpeningStock(){
     at:new Date().toISOString()
   });
   saveOpeningStock(arr);
-  toast('✅ Opening stock saved');
   refreshOSCard();
+  // Push to Google Sheet
+  var osRec=arr[arr.length-1];
+  if(GSURL){
+    (async function(){
+      try{
+        var fd=new FormData();
+        fd.append('action','openstock');
+        fd.append('payload',JSON.stringify(osRec));
+        var r=await fetch(GSURL,{method:'POST',body:fd});
+        var j=await r.json();
+        if(j.status==='ok'){toast('✅ Opening stock saved & synced to Sheet');}
+        else{toast('✅ Saved locally (Sheet sync failed — will retry on next submit)');}
+      }catch(ex){toast('✅ Saved locally (offline — will sync later)');}
+    })();
+  } else {
+    toast('✅ Opening stock saved');
+  }
 }
 
 // RM Opening Stock edit panel
