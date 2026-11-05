@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v106</title>
+<title>TAFE East Zone – CS Field Tool v107</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1601,6 +1601,12 @@ function doGet(e) {
       return ok();
     }
 
+    if (action === 'ping' || action === 'test') {
+      var pt = ss.getSheetByName('Connection_Test') || ss.insertSheet('Connection_Test');
+      pt.getRange(1,1).setValue('Last ping: ' + new Date().toLocaleString());
+      return ok();
+    }
+
     if (action === 'pull' || action === 'json') {
       var sheet = ss.getSheetByName('Entries');
       if (!sheet || sheet.getLastRow() &lt; 2) return ok([]);
@@ -2244,7 +2250,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v106';
+    if(tsub)tsub.textContent='CS Field Tool v107';
   }catch(e){}
 
   // Step 3: Set dates
