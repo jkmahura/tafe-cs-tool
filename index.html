@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v105</title>
+<title>TAFE East Zone – CS Field Tool v106</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1460,7 +1460,7 @@ function doPost(e) {
           HEADERS.some(function(h, i) { return String(existingHdrs[i]||'') !== h; });
         if (needsUpdate) {
           // Extend columns if needed, then write correct headers
-          if (sheet.getLastColumn() < HEADERS.length)
+          if (sheet.getLastColumn() &lt; HEADERS.length)
             sheet.getRange(1, sheet.getLastColumn()+1, 1, HEADERS.length - sheet.getLastColumn()).setValues([HEADERS.slice(sheet.getLastColumn())]);
           sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
         }
@@ -1570,7 +1570,7 @@ function doGet(e) {
 
     // Opening stock via GET (same logic as doPost)
     if (action === 'openstock') {
-      var raw2 = (e.parameter && e.parameter.payload) || '{}';
+      var raw2 = (e.parameter &amp;&amp; e.parameter.payload) || '{}';
       var data2 = JSON.parse(raw2);
       var osSheet2 = ss.getSheetByName('OpeningStock') || ss.insertSheet('OpeningStock');
       var OS_HDR2 = ['OutletId','OutletName','Month','Year','OParts','OOil','SubmittedBy','Role','Timestamp','EntryId'];
@@ -1580,7 +1580,7 @@ function doGet(e) {
         var exHdr2 = osSheet2.getRange(1,1,1,osSheet2.getLastColumn()).getValues()[0];
         var needH2 = exHdr2.length !== OS_HDR2.length || OS_HDR2.some(function(h,i){return String(exHdr2[i]||'')!==h;});
         if (needH2) {
-          if (osSheet2.getLastColumn() < OS_HDR2.length)
+          if (osSheet2.getLastColumn() &lt; OS_HDR2.length)
             osSheet2.getRange(1,osSheet2.getLastColumn()+1,1,OS_HDR2.length-osSheet2.getLastColumn()).setValues([OS_HDR2.slice(osSheet2.getLastColumn())]);
           osSheet2.getRange(1,1,1,OS_HDR2.length).setValues([OS_HDR2]);
         }
@@ -1588,10 +1588,10 @@ function doGet(e) {
       var osHdrs2 = osSheet2.getRange(1,1,1,osSheet2.getLastColumn()).getValues()[0]
         .map(function(h){return String(h).toLowerCase().replace(/[^a-z0-9]/g,'');});
       var oIdCol2=osHdrs2.indexOf('outletid'),oMonCol2=osHdrs2.indexOf('month'),oYrCol2=osHdrs2.indexOf('year');
-      if (osSheet2.getLastRow()>1 && oIdCol2>=0 && oMonCol2>=0 && oYrCol2>=0) {
+      if (osSheet2.getLastRow()&gt;1 &amp;&amp; oIdCol2&gt;=0 &amp;&amp; oMonCol2&gt;=0 &amp;&amp; oYrCol2&gt;=0) {
         var osRows2=osSheet2.getRange(2,1,osSheet2.getLastRow()-1,osSheet2.getLastColumn()).getValues();
-        for(var ri2=0;ri2<osRows2.length;ri2++){
-          if(String(osRows2[ri2][oIdCol2])===String(data2.outletId)&&String(osRows2[ri2][oMonCol2])===String(data2.mon)&&String(osRows2[ri2][oYrCol2])===String(data2.yr)){
+        for(var ri2=0;ri2&lt;osRows2.length;ri2++){
+          if(String(osRows2[ri2][oIdCol2])===String(data2.outletId)&amp;&amp;String(osRows2[ri2][oMonCol2])===String(data2.mon)&amp;&amp;String(osRows2[ri2][oYrCol2])===String(data2.yr)){
             osSheet2.deleteRow(ri2+2); break;
           }
         }
@@ -1660,7 +1660,7 @@ function doGet(e) {
         var exHdr = osSheet.getRange(1,1,1,osSheet.getLastColumn()).getValues()[0];
         var needH = exHdr.length !== OS_HDR.length || OS_HDR.some(function(h,i){return String(exHdr[i]||'')!==h;});
         if (needH) {
-          if (osSheet.getLastColumn() < OS_HDR.length)
+          if (osSheet.getLastColumn() &lt; OS_HDR.length)
             osSheet.getRange(1,osSheet.getLastColumn()+1,1,OS_HDR.length-osSheet.getLastColumn()).setValues([OS_HDR.slice(osSheet.getLastColumn())]);
           osSheet.getRange(1,1,1,OS_HDR.length).setValues([OS_HDR]);
         }
@@ -1669,10 +1669,10 @@ function doGet(e) {
       var osHdrs = osSheet.getRange(1,1,1,osSheet.getLastColumn()).getValues()[0]
         .map(function(h){return String(h).toLowerCase().replace(/[^a-z0-9]/g,'');});
       var oIdCol=osHdrs.indexOf('outletid'), oMonCol=osHdrs.indexOf('month'), oYrCol=osHdrs.indexOf('year');
-      if (osSheet.getLastRow()>1 && oIdCol>=0 && oMonCol>=0 && oYrCol>=0) {
+      if (osSheet.getLastRow()&gt;1 &amp;&amp; oIdCol&gt;=0 &amp;&amp; oMonCol&gt;=0 &amp;&amp; oYrCol&gt;=0) {
         var osRows=osSheet.getRange(2,1,osSheet.getLastRow()-1,osSheet.getLastColumn()).getValues();
-        for(var ri=0;ri<osRows.length;ri++){
-          if(String(osRows[ri][oIdCol])===String(data.outletId)&&String(osRows[ri][oMonCol])===String(data.mon)&&String(osRows[ri][oYrCol])===String(data.yr)){
+        for(var ri=0;ri&lt;osRows.length;ri++){
+          if(String(osRows[ri][oIdCol])===String(data.outletId)&amp;&amp;String(osRows[ri][oMonCol])===String(data.mon)&amp;&amp;String(osRows[ri][oYrCol])===String(data.yr)){
             osSheet.deleteRow(ri+2); break;
           }
         }
@@ -1703,19 +1703,19 @@ function doGet(e) {
       for (var i = 1; i &lt; rows.length; i++) {
         var fin = String(rows[i][finalCol]||'').toUpperCase();
         if (fin === 'FALSE') continue;
-        var byVal = (empCol>=0 && rows[i][empCol]) ? String(rows[i][empCol]) : String(rows[i][byCol]);
+        var byVal = (empCol&gt;=0 &amp;&amp; rows[i][empCol]) ? String(rows[i][empCol]) : String(rows[i][byCol]);
         var key = String(rows[i][outletCol])+'_'+String(rows[i][dateCol])+'_'+byVal;
-        var ts = tsCol >= 0 ? new Date(rows[i][tsCol]||0).getTime() : 0;
-        if (!best[key] || ts > best[key].ts) best[key] = {row: i+1, ts: ts};
+        var ts = tsCol &gt;= 0 ? new Date(rows[i][tsCol]||0).getTime() : 0;
+        if (!best[key] || ts &gt; best[key].ts) best[key] = {row: i+1, ts: ts};
       }
       // Mark all non-best TRUE rows as FALSE
       var deduped = 0;
       for (var i = 1; i &lt; rows.length; i++) {
         var fin = String(rows[i][finalCol]||'').toUpperCase();
         if (fin === 'FALSE') continue;
-        var byVal = (empCol>=0 && rows[i][empCol]) ? String(rows[i][empCol]) : String(rows[i][byCol]);
+        var byVal = (empCol&gt;=0 &amp;&amp; rows[i][empCol]) ? String(rows[i][empCol]) : String(rows[i][byCol]);
         var key = String(rows[i][outletCol])+'_'+String(rows[i][dateCol])+'_'+byVal;
-        if (best[key] && best[key].row !== i+1) {
+        if (best[key] &amp;&amp; best[key].row !== i+1) {
           sheet.getRange(i+1, finalCol+1).setValue('FALSE');
           deduped++;
         }
@@ -2244,7 +2244,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v105';
+    if(tsub)tsub.textContent='CS Field Tool v106';
   }catch(e){}
 
   // Step 3: Set dates
