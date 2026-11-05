@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v104</title>
+<title>TAFE East Zone – CS Field Tool v105</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2244,7 +2244,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v104';
+    if(tsub)tsub.textContent='CS Field Tool v105';
   }catch(e){}
 
   // Step 3: Set dates
@@ -2258,8 +2258,13 @@ function showApp(){
     var tyEl=document.getElementById('ty');if(tyEl)tyEl.value=selYr;
   }catch(e){}
 
-  // Step 4: GS URL
+  // Step 4: GS URL + auto-fill Sheet ID in Setup if previously saved
   try{if(GSURL){var gu=document.getElementById('gs-url');if(gu)gu.value=GSURL;}}catch(e){}
+  try{
+    var _sid=localStorage.getItem('tafe_sheet_id')||'';
+    var _sidEl=document.getElementById('gs-sheet-id');
+    if(_sid&&_sidEl&&!_sidEl.value.trim()){_sidEl.value=_sid;updateScriptPreview();}
+  }catch(e){}
 
   // Step 5: Drawer visibility by role
   try{
@@ -6962,6 +6967,7 @@ function extractSheetIdFromUrl(){
     var id=m?m[1]:(/^[a-zA-Z0-9_-]{10,}$/.test(val)?val:'');
     if(!id){toast('❌ Could not find Sheet ID -- paste the full Sheet URL or just the ID');return;}
     document.getElementById('gs-sheet-id').value=id;
+    try{localStorage.setItem('tafe_sheet_id',id);}catch(ex){}
     updateScriptPreview();
   };
   if(navigator.clipboard&&navigator.clipboard.readText){
@@ -6978,6 +6984,7 @@ function extractSheetIdFromUrl(){
 function updateScriptPreview(){
   var sid=(document.getElementById('gs-sheet-id')||{}).value||'';
   sid=sid.trim();
+  if(sid&&sid!=='PASTE_YOUR_SHEET_ID_HERE'){try{localStorage.setItem('tafe_sheet_id',sid);}catch(ex){}}
   var pre=document.getElementById('gs-script');
   if(!pre)return;
   var okEl=document.getElementById('gs-sid-ok');
@@ -7003,14 +7010,22 @@ function copyGSCode(){
   if(!pre){toast('Script block not found');return;}
   var sid=(document.getElementById('gs-sheet-id')||{}).value||'';
   sid=sid.trim();
+  // Auto-fill Sheet ID from localStorage if field is empty
+  if(!sid||sid==='PASTE_YOUR_SHEET_ID_HERE'){
+    try{sid=(localStorage.getItem('tafe_sheet_id')||'').trim();}catch(ex){}
+  }
   // Get raw text (entities decoded by innerText)
   var text=pre.innerText||pre.textContent||'';
   if(!sid||sid==='PASTE_YOUR_SHEET_ID_HERE'){
-    toast('⚠️ Enter your Sheet ID in Step 1 first!');
+    // Still empty — let them copy with placeholder, just warn
+    toast('⚠️ Sheet ID not found — paste it in Step 1 first, then recopy');
     document.getElementById('gs-sid-ok').textContent='⚠️ Please enter your Sheet ID above before copying';
     document.getElementById('gs-sid-ok').style.color='var(--red)';
     return;
   }
+  // Fill the field visually too
+  var sidEl=document.getElementById('gs-sheet-id');
+  if(sidEl&&!sidEl.value.trim())sidEl.value=sid;
   // Inject actual Sheet ID into copied text
   text=text.replace(/PASTE_YOUR_SHEET_ID_HERE/g,sid);
   if(navigator.clipboard&&navigator.clipboard.writeText){
