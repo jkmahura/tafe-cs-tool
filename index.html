@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v116</title>
+<title>TAFE East Zone – CS Field Tool v117</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1658,7 +1658,26 @@ function doGet(e) {
             at: (function(){var ts=o['timestamp']||o['at']||o['submittedat']||'';if(!ts)return 0;if(ts instanceof Date)return isNaN(ts.getTime())?0:ts.getTime();if(typeof ts==='number')return ts;var s=String(ts).trim();if(!s)return 0;var d=new Date(s);if(!isNaN(d.getTime()))return d.getTime();var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);if(m){var d2=new Date(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0));return isNaN(d2.getTime())?0:d2.getTime();}return 0;})()
           };
         });
-      return ok(entries);
+      // Also pull OpeningStock records and return alongside entries
+      var osSheet2 = ss.getSheetByName('OpeningStock');
+      var osData = [];
+      if (osSheet2 &amp;&amp; osSheet2.getLastRow() &gt; 1) {
+        var osRows2 = osSheet2.getDataRange().getValues();
+        var osHdrs2 = osRows2[0].map(function(h){ return String(h).toLowerCase().replace(/[^a-z0-9]/g,''); });
+        osData = osRows2.slice(1).map(function(row){
+          var o={}; osHdrs2.forEach(function(h,i){o[h]=row[i];});
+          return {
+            id: String(o['outletid']||'')+'|'+String(o['month']||'')+'|'+String(o['year']||''),
+            outletId: String(o['outletid']||'').trim(),
+            outletName: String(o['outletname']||''),
+            mon: String(o['month']||'').trim(), yr: String(o['year']||'').trim(),
+            oparts: +o['oparts']||0, ooil: +o['ooil']||0,
+            by: String(o['submittedby']||''), byRole: String(o['role']||''),
+            at: (function(){var ts=o['timestamp']||'';if(ts instanceof Date)return ts.toISOString();return String(ts||'');})()
+          };
+        }).filter(function(r){return r.outletId&amp;&amp;r.mon&amp;&amp;r.yr;});
+      }
+      return ok({entries:entries, openingStock:osData});
     }
 
     // -- OPENING STOCK: save one record per dealer per month
@@ -2261,7 +2280,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v116';
+    if(tsub)tsub.textContent='CS Field Tool v117';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3826,6 +3845,20 @@ function getOpeningStock(){
 }
 function saveOpeningStock(arr){
   try{localStorage.setItem('tafe_opening_stock',JSON.stringify(arr));}catch(e){}
+}
+function mergeOpeningStock(newRecords){
+  // Merge Sheet OS records into local — keep latest per outletId+mon+yr
+  var arr=getOpeningStock();
+  var idx={};
+  arr.forEach(function(r){idx[r.outletId+'|'+r.mon+'|'+r.yr]=r;});
+  newRecords.forEach(function(r){
+    var k=r.outletId+'|'+r.mon+'|'+r.yr;
+    if(!idx[k]){idx[k]=r;}
+    // Sheet is authoritative — always overwrite (RM may correct via RM panel)
+    else{idx[k]=r;}
+  });
+  saveOpeningStock(Object.values(idx));
+  renderDash&&renderDash();
 }
 function getOSRecord(outletId,mon,yr){
   return getOpeningStock().find(function(r){return r.outletId===outletId&&r.mon===mon&&String(r.yr)===String(yr);});
@@ -6813,13 +6846,15 @@ function pullFromSheet(){
         if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ '+(data.message||'Sheet error')+'</span>';
         return;
       }
-      var newEntries=data.entries||[];
+      var newEntries=Array.isArray(data)?data:(data.entries||[]);
+      var osArr=data.openingStock||[];
+      if(osArr.length){mergeOpeningStock(osArr);}
       if(!newEntries.length){
         if(statusEl)statusEl.innerHTML='<span style="color:var(--amber)">⚠ No entries in Sheet yet.</span>';
         return;
       }
       var count=mergeSheetEntries(newEntries,statusEl,'manual');
-      var msg='✅ '+newEntries.length+' entries from Sheet. Dashboard updated.';
+      var msg='✅ '+newEntries.length+' entries'+(osArr.length?' + '+osArr.length+' OS records':'')+' from Sheet. Dashboard updated.';
       if(statusEl)statusEl.innerHTML='<span style="color:var(--green)">'+msg+'</span>';
       toast(msg);
       setTimeout(function(){if(statusEl)statusEl.innerHTML='';},5000);
@@ -7097,8 +7132,12 @@ function autoPullFromSheet(){
   fetch(url+'?action=json&t='+Date.now())
     .then(function(r){return r.json();})
     .then(function(data){
-      if(data.status!=='ok'||!data.entries||!data.entries.length)return;
-      mergeSheetEntries(data.entries,statusEl,'auto');
+      if(data.status!=='ok')return;
+      // Support both old format (data.entries=[]) and new format (data={entries:[],openingStock:[]})
+      var ents=Array.isArray(data)?data:(data.entries||[]);
+      var osArr=data.openingStock||[];
+      if(osArr.length)mergeOpeningStock(osArr);
+      if(ents.length)mergeSheetEntries(ents,statusEl,'auto');
     })
     .catch(function(){/* silent fail - user can manually refresh */});
 }
