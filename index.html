@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v117</title>
+<title>TAFE East Zone – CS Field Tool v118</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1677,7 +1677,9 @@ function doGet(e) {
           };
         }).filter(function(r){return r.outletId&amp;&amp;r.mon&amp;&amp;r.yr;});
       }
-      return ok({entries:entries, openingStock:osData});
+      // Return directly — ok() wraps as {status,entries} which would double-nest our object
+      return ContentService.createTextOutput(JSON.stringify({status:'ok',entries:entries,openingStock:osData}))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // -- OPENING STOCK: save one record per dealer per month
@@ -2095,7 +2097,8 @@ function tvaRows(label,a,t,tabType,bg){
       ct(t.rev)+ca(a.rev,t.rev,'',true)+
       ct(tPtot)+ca(aPtot,tPtot,'',false)+ct(t.pparts)+ca(a.pparts,t.pparts,false)+ct(t.poil)+ca(a.poil,t.poil,'',true)+
       ct(tStot)+ca(aStot,tStot,'',false)+ct(t.sparts)+ca(a.sparts,t.sparts,false)+ct(t.soil)+ca(a.soil,t.soil,'',true)+
-      ct(t.ew,'int')+ca(a.ew,t.ew,'int')+ct(t.uc,'int')+ca(a.uc,t.uc,'int')+'</tr>';
+      ct(t.ew,'int')+ca(a.ew,t.ew,'int')+ct(t.uc,'int')+ca(a.uc,t.uc,'int',true)+
+      ct(t.hp,'int')+ca(a.hp,t.hp,'int',true)+ct(t.fa,'int')+ca(a.fa,t.fa,'int')+'</tr>';
   }
   var isDirect=(tabType==='direct');
   return'<tr style="background:'+bg2+';border-bottom:1px solid #e5e7eb">'+nd+
@@ -2133,7 +2136,8 @@ function tvaTotRow(label,totA,totT,tabType){
       ct(totT.rev)+ca(totA.rev,totT.rev,'',true)+
       ct(tPtot)+ca(aPtot,tPtot,'',false)+ct(totT.pparts)+ca(totA.pparts,totT.pparts,false)+ct(totT.poil)+ca(totA.poil,totT.poil,'',true)+
       ct(tStot)+ca(aStot,tStot,'',false)+ct(totT.sparts)+ca(totA.sparts,totT.sparts,false)+ct(totT.soil)+ca(totA.soil,totT.soil,'',true)+
-      ct(totT.ew,'int')+ca(totA.ew,totT.ew,'int')+ct(totT.uc,'int')+ca(totA.uc,totT.uc,'int')+'</tr>';
+      ct(totT.ew,'int')+ca(totA.ew,totT.ew,'int')+ct(totT.uc,'int')+ca(totA.uc,totT.uc,'int',true)+
+      ct(totT.hp,'int')+ca(totA.hp,totT.hp,'int',true)+ct(totT.fa,'int')+ca(totA.fa,totT.fa,'int')+'</tr>';
   var isDirect=(tabType==='direct');
   return'<tr style="'+style+'">'+nd+
     ct(totT.sl,'int')+ca(totA.sl,totT.sl,'int')+ct(totT.fs,'int')+ca(totA.fs,totT.fs,'int')+ct(totT.mj,'int')+ca(totA.mj,totT.mj,'int',true)+
@@ -2280,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v117';
+    if(tsub)tsub.textContent='CS Field Tool v118';
   }catch(e){}
 
   // Step 3: Set dates
@@ -2771,9 +2775,9 @@ function renderDash(tab){
     hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',1,false)+'</tr>'+
         '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+'</tr>'; span=3;
   }else if(tab==='state'||tab==='rm'){
-    // SL+FS+MJ | Rev | P Total+P.Parts+P.Oil | S Total+S.Parts+S.Oil | EW+UC
-    hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',3,true)+thg('REVENUE',1,true)+thg('PRIMARY',3,true)+thg('SECONDARY',3,true)+thg('EW',1,true)+thg('UC',1,false)+'</tr>'+
-        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+thp('FS')+thp('MJ',true)+thp('Rev',true)+thp('P')+thp('P.Parts')+thp('P.Oil',true)+thp('S')+thp('S.Parts')+thp('S.Oil',true)+thp('EW',true)+thp('UC')+'</tr>'; span=25;
+    // SL+FS+MJ | Rev | P Total+P.Parts+P.Oil | S Total+S.Parts+S.Oil | EW+UC | HP | FA
+    hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',3,true)+thg('REVENUE',1,true)+thg('PRIMARY',3,true)+thg('SECONDARY',3,true)+thg('EW',1,true)+thg('UC',1,true)+thg('HP',1,true)+thg('FA',1,false)+'</tr>'+
+        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+thp('FS')+thp('MJ',true)+thp('Rev',true)+thp('P')+thp('P.Parts')+thp('P.Oil',true)+thp('S')+thp('S.Parts')+thp('S.Oil',true)+thp('EW',true)+thp('UC',true)+thp('HP',true)+thp('FA')+'</tr>'; span=29;
   }else if(tab==='km'){
     hdr='<tr style="'+HS+'"><th '+NM+'>KPDM VIEW</th>'+thg('PRIMARY TOTAL',1,false)+thg('BREAKDOWN',2,false)+'</tr>'+
         '<tr style="'+SS+'"><th '+NS+'></th>'+thp('P')+thp('P.Oil')+thp('P.Parts')+'</tr>'; span=7;
@@ -6846,8 +6850,9 @@ function pullFromSheet(){
         if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ '+(data.message||'Sheet error')+'</span>';
         return;
       }
-      var newEntries=Array.isArray(data)?data:(data.entries||[]);
-      var osArr=data.openingStock||[];
+      var payload2=(!Array.isArray(data.entries)&&data.entries&&data.entries.entries)?data.entries:data;
+      var newEntries=Array.isArray(payload2)?payload2:(payload2.entries||[]);
+      var osArr=payload2.openingStock||[];
       if(osArr.length){mergeOpeningStock(osArr);}
       if(!newEntries.length){
         if(statusEl)statusEl.innerHTML='<span style="color:var(--amber)">⚠ No entries in Sheet yet.</span>';
@@ -7133,9 +7138,11 @@ function autoPullFromSheet(){
     .then(function(r){return r.json();})
     .then(function(data){
       if(data.status!=='ok')return;
-      // Support both old format (data.entries=[]) and new format (data={entries:[],openingStock:[]})
-      var ents=Array.isArray(data)?data:(data.entries||[]);
-      var osArr=data.openingStock||[];
+      // Handle nested double-wrap: old ok() wraps as {status,entries} so if data.entries is itself
+      // an object with .entries, unwrap it (old GAS not yet redeployed)
+      var payload=(!Array.isArray(data.entries)&&data.entries&&data.entries.entries)?data.entries:data;
+      var ents=Array.isArray(payload)?payload:(payload.entries||[]);
+      var osArr=payload.openingStock||[];
       if(osArr.length)mergeOpeningStock(osArr);
       if(ents.length)mergeSheetEntries(ents,statusEl,'auto');
     })
