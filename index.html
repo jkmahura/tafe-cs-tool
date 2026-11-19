@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v111</title>
+<title>TAFE East Zone – CS Field Tool v112</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1903,7 +1903,11 @@ function injectMasterTargets(){
   var tMap={};
   MASTER_TARGETS.forEach(function(t){
     var id='tgt_'+(t.level||'dealer')+'_'+t.entityId+'_'+(t.month||'')+'_'+(t.year||'');
-    tMap[id]=t;
+    // Map activity->hp and referral->fa so target-based scoring works
+    var rec=Object.assign({},t);
+    if(rec.hp==null&&rec.activity!=null)rec.hp=rec.activity;
+    if(rec.fa==null&&rec.referral!=null)rec.fa=rec.referral;
+    tMap[id]=rec;
   });
   ls('tgts',tMap);
 }
@@ -2079,7 +2083,8 @@ function tvaRows(label,a,t,tabType,bg){
     ct(t.rev)+ca(a.rev,t.rev,'',true)+
     (isDirect?ct(tPtot)+ca(aPtot,tPtot,'',false)+ct(t.pparts)+ca(a.pparts,t.pparts,false)+ct(t.poil)+ca(a.poil,t.poil,'',true):'')+
     ct(tStot)+ca(aStot,tStot,'',false)+ct(t.sparts)+ca(a.sparts,t.sparts,false)+ct(t.soil)+ca(a.soil,t.soil,'',true)+
-    ct(t.ew,'int')+ca(a.ew,t.ew,'int')+ct(t.uc,'int')+ca(a.uc,t.uc,'int')+'</tr>';
+    ct(t.ew,'int')+ca(a.ew,t.ew,'int')+ct(t.uc,'int')+ca(a.uc,t.uc,'int',true)+
+    ct(t.hp,'int')+ca(a.hp,t.hp,'int',true)+ct(t.fa,'int')+ca(a.fa,t.fa,'int')+'</tr>';
 }
 // Total row -- same split Tgt|Act on navy background
 function tvaTotRow(label,totA,totT,tabType){
@@ -2115,7 +2120,8 @@ function tvaTotRow(label,totA,totT,tabType){
     ct(totT.rev)+ca(totA.rev,totT.rev,'',true)+
     (isDirect?ct(tPtot)+ca(aPtot,tPtot,'',false)+ct(totT.pparts)+ca(totA.pparts,totT.pparts,false)+ct(totT.poil)+ca(totA.poil,totT.poil,'',true):'')+
     ct(tStot)+ca(aStot,tStot,'',false)+ct(totT.sparts)+ca(totA.sparts,totT.sparts,false)+ct(totT.soil)+ca(totA.soil,totT.soil,'',true)+
-    ct(totT.ew,'int')+ca(totA.ew,totT.ew,'int')+ct(totT.uc,'int')+ca(totA.uc,totT.uc,'int')+'</tr>';
+    ct(totT.ew,'int')+ca(totA.ew,totT.ew,'int')+ct(totT.uc,'int')+ca(totA.uc,totT.uc,'int',true)+
+    ct(totT.hp,'int')+ca(totA.hp,totT.hp,'int',true)+ct(totT.fa,'int')+ca(totA.fa,totT.fa,'int')+'</tr>';
 }function dbLoad(col,lim){
   // Pure localStorage -- instant, no async, no network
   var store=ls(col)||{};
@@ -2254,7 +2260,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v111';
+    if(tsub)tsub.textContent='CS Field Tool v112';
   }catch(e){}
 
   // Step 3: Set dates
@@ -2697,18 +2703,18 @@ function renderDash(tab){
   }
 
   var isKPD=(tab==='kpd');
-  var totA={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0};
-  var totT={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0};
+  var totA={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,hp:0,fa:0};
+  var totT={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,hp:0,fa:0};
 
   var showOS=(tab==='dealer'||tab==='kpd'); // show opening stock cols only on dealer/KPD tabs
   var dataRows=rows.map(function(r,ri){
     var a=r.a,t=r.t||{};
     totA.sl+=a.sl||0;totA.fs+=a.fs||0;totA.mj+=a.mj||0;totA.rev+=a.rev||0;
     totA.poil+=a.poil||0;totA.pparts+=a.pparts||0;
-    totA.soil+=a.soil||0;totA.sparts+=a.sparts||0;totA.ew+=a.ew||0;totA.uc+=a.uc||0;
+    totA.soil+=a.soil||0;totA.sparts+=a.sparts||0;totA.ew+=a.ew||0;totA.uc+=a.uc||0;totA.hp+=a.hp||0;totA.fa+=a.fa||0;
     totT.sl+=t.sl||0;totT.fs+=t.fs||0;totT.mj+=t.mj||0;totT.rev+=t.rev||0;
     totT.poil+=t.poil||0;totT.pparts+=t.pparts||0;
-    totT.soil+=t.soil||0;totT.sparts+=t.sparts||0;totT.ew+=t.ew||0;totT.uc+=t.uc||0;
+    totT.soil+=t.soil||0;totT.sparts+=t.sparts||0;totT.ew+=t.ew||0;totT.uc+=t.uc||0;totT.hp+=t.hp||0;totT.fa+=t.fa||0;
     var bg=ri%2?'#f7f9ff':'#fff';
     var base=tvaRows(r.k,a,t,tab,bg);
     if(!showOS)return base;
@@ -2756,9 +2762,9 @@ function renderDash(tab){
     var isDr=(tab==='direct');
     var isDealer=(tab==='dealer');
     var addOS=isDealer; // show opening stock cols for dealer tab
-    hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',3,true)+thg('REVENUE',1,true)+(isDr?thg('PRIMARY',3,true):'')+thg('SECONDARY',3,true)+thg('EW',1,true)+thg('UC',1,false)+(addOS?osHdrCols:'')+'</tr>'+
-        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+thp('FS')+thp('MJ',true)+thp('Rev',true)+(isDr?thp('P')+thp('P.Parts')+thp('P.Oil',true):'')+thp('S')+thp('S.Parts')+thp('S.Oil',true)+thp('EW',true)+thp('UC')+(addOS?osSubCols:'')+'</tr>';
-    span=isDr?25:isDealer?21:19;
+    hdr='<tr style="'+HS+'"><th '+NM+'>'+tab.toUpperCase()+'</th>'+thg('SERVICES',3,true)+thg('REVENUE',1,true)+(isDr?thg('PRIMARY',3,true):'')+thg('SECONDARY',3,true)+thg('EW',1,true)+thg('UC',1,true)+thg('HP',1,true)+thg('FA',1,false)+(addOS?osHdrCols:'')+'</tr>'+
+        '<tr style="'+SS+'"><th '+NS+'></th>'+thp('SL')+thp('FS')+thp('MJ',true)+thp('Rev',true)+(isDr?thp('P')+thp('P.Parts')+thp('P.Oil',true):'')+thp('S')+thp('S.Parts')+thp('S.Oil',true)+thp('EW',true)+thp('UC',true)+thp('HP',true)+thp('FA')+(addOS?osSubCols:'')+'</tr>';
+    span=isDr?29:isDealer?25:23;
   }
   // Opening stock zone totals (for total row)
   var osTotParts=0,osTotOil=0;
@@ -3068,8 +3074,8 @@ function agg(arr){
       latestByOutlet[oid]=e;
   });
   var deduped=Object.keys(latestByOutlet).map(function(k){return latestByOutlet[k];});
-  var r={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0};
-  deduped.forEach(function(e){var k=e.kpi||{};r.sl+=k.sl||0;r.fs+=k.fs||0;r.mj+=k.mj||0;r.rev+=k.rev||0;r.poil+=k.poil||0;r.pparts+=k.pparts||0;r.soil+=k.soil||0;r.sparts+=k.sparts||0;r.ew+=k.ew||0;r.uc+=k.uc||0;});
+  var r={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,hp:0,fa:0};
+  deduped.forEach(function(e){var k=e.kpi||{};r.sl+=k.sl||0;r.fs+=k.fs||0;r.mj+=k.mj||0;r.rev+=k.rev||0;r.poil+=k.poil||0;r.pparts+=k.pparts||0;r.soil+=k.soil||0;r.sparts+=k.sparts||0;r.ew+=k.ew||0;r.uc+=k.uc||0;r.hp+=k.hp||0;r.fa+=k.fa||0;});
   return r;
 }
 function getDealerTotal(dealerId,mon,yr){
@@ -6483,10 +6489,12 @@ function normTgtRow(r){
   var sms   =parseFloat(r.sms||r['svc mkt share']||0)||0;
   var sret  =parseFloat(r.sret||r['svc retention']||r.retention||0)||0;
   var mpreq =parseFloat(r.mpreq||r['mp required']||r.manpower||0)||0;
+  var hp    =parseFloat(r.hp||r['hot prospect']||r.hotprospect||r.activity||0)||0;
+  var fa    =parseFloat(r.fa||r['field activity']||r.fieldactivity||r.referral||0)||0;
   var id    =level+'_'+eid+'_'+mon+'_'+yr;
   return{id:id,level:level,entityId:eid,month:mon,year:yr,
     poil:poil,pparts:pparts,soil:soil,sparts:sparts,
-    sl:sl,fs:fs,mj:mj,rev:rev,ew:ew,uc:uc,sms:sms,sret:sret,mpreq:mpreq,
+    sl:sl,fs:fs,mj:mj,rev:rev,ew:ew,uc:uc,sms:sms,sret:sret,mpreq:mpreq,hp:hp,fa:fa,
     by:CU&&CU.name||'Upload',at:Date.now()};
 }
 
