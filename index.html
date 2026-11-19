@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v112</title>
+<title>TAFE East Zone – CS Field Tool v113</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1647,7 +1647,8 @@ function doGet(e) {
             isFinal: String(o['isfinal']||'TRUE').toUpperCase() !== 'FALSE',
             kpi: { sl:+o['sl']||0, fs:+o['fs']||0, mj:+o['mj']||0, rev:+o['revenue']||0, poil:+o['poil']||0,
                    pparts:+o['pparts']||0, soil:+o['soil']||0, sparts:+o['sparts']||0,
-                   ew:+o['ew']||0, uc:+o['uc']||0, sms:+o['sms%']||+o['sms']||0, sret:+o['retention%']||+o['retention']||0, vif:+o['vif']||0 },
+                   ew:+o['ew']||0, uc:+o['uc']||0, sms:+o['sms%']||+o['sms']||0, sret:+o['retention%']||+o['retention']||0, vif:+o['vif']||0,
+                   hp:+o['hp']||0, fa:+o['fa']||0 },
             manpower: { req:+o['mpreq']||0, avail:+o['mpavail']||0,
                         trained:+o['trained']||0, untrained:+o['untrained']||0 },
             highlight: o['highlight']||'', remarks: o['remarks']||'',
@@ -2260,7 +2261,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v112';
+    if(tsub)tsub.textContent='CS Field Tool v113';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3528,6 +3529,7 @@ async function submitEntry(){
   clearImoRows();
   checkAlertDot();checkEntryAlert();
   renderTodayEntries();
+  renderDash();
 }
 
 // -- IMO HELPERS -------------------------------------------
@@ -3613,13 +3615,14 @@ function renderTodayEntries(){
   // Merge and dedupe by ID
   var all=myE;actE.forEach(function(e){if(!all.find(function(x){return x.id===e.id;}))all.push(e);});
   // CRITICAL: dedupe by outletId -- same outlet should show only once (keep highest at timestamp)
+  // Sort by at DESC first so the first entry we see per outlet is always the latest
+  all=all.slice().sort(function(a,b){return (b.at||0)-(a.at||0);});
   var seen={};
   all=all.filter(function(e){
     var k=e.outletId||e.id;
-    if(!seen[k]||(e.at||0)>(seen[k].at||0)){seen[k]=e;return true;}
-    return false;
+    if(seen[k])return false; // already have a newer (or same) entry for this outlet
+    seen[k]=true;return true;
   });
-  all=all.slice().sort(function(a,b){return (b.at||0)-(a.at||0);});
   if(!all.length){panel.style.display='none';return;}
   panel.style.display='block';
   var html=all.map(function(e){
@@ -3834,7 +3837,7 @@ function refreshOSCard(){
   if(!card)return;
 
   // Hide for KPD/ASK
-  var oid=v('sel-outlet');
+  var oid=v('e-outlet');
   var outlet=dealers.find(function(d){return d.id===oid;})||{};
   if(outlet.isKPD||outlet.isASK){card.style.display='none';return;}
   card.style.display='';
@@ -3855,7 +3858,7 @@ function refreshOSCard(){
 }
 
 async function submitOpeningStock(){
-  var oid=v('sel-outlet');
+  var oid=v('e-outlet');
   if(!oid){toast('Select a dealer first');return;}
   var oparts=parseFloat(document.getElementById('os-parts').value)||0;
   var ooil=parseFloat(document.getElementById('os-oil').value)||0;
