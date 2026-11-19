@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v115</title>
+<title>TAFE East Zone – CS Field Tool v116</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2261,7 +2261,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v115';
+    if(tsub)tsub.textContent='CS Field Tool v116';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3631,7 +3631,7 @@ function renderTodayEntries(){
     var d=dealers.find(function(x){return x.id===e.outletId;})||{};
     var nm=d.name||e.outletId||'Unknown';
     var k=e.kpi||{};
-    var kSummary='SL:'+Math.round(k.sl||0)+' Rev:'+fl(k.rev||0)+' Sec.Parts:'+fl(k.sparts||0)+' Sec.Oil:'+fl(k.soil||0)+' EW:'+Math.round(k.ew||0);
+    var kSummary='SL:'+Math.round(k.sl||0)+' Rev:'+fl(k.rev||0)+' S.Parts:'+fl(k.sparts||0)+' S.Oil:'+fl(k.soil||0)+' EW:'+Math.round(k.ew||0)+((k.hp||0)?' HP:'+Math.round(k.hp):'')+((k.fa||0)?' FA:'+Math.round(k.fa):'');
     if(e.isKPD)kSummary='Pr.Oil:'+fl(k.poil||0)+' Pr.Parts:'+fl(k.pparts||0);
     var timeStr=e.at?new Date(e.at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'';
     var editBtn='<div style="display:flex;gap:4px"><button onclick="loadEntryForEdit(\''+e.id+'\')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">✏️ Edit</button>'
@@ -7184,15 +7184,36 @@ function mergeSheetEntries(newEntries,statusEl,mode){
     if(e.action==='delete'&&e._replaces){delete eMap[e._replaces];return;}
     if(e._replaces)delete eMap[e._replaces];
     // Keep the entry with higher 'at' timestamp -- prevents blank row overwriting real data
-    if(!eMap[e.id]||(e.at||0)>=(eMap[e.id].at||0))eMap[e.id]=e;
+    var existing=eMap[e.id];
+    if(!existing||(e.at||0)>=(existing.at||0)){
+      // Preserve non-zero HP/FA from local if Sheet has 0 (Sheet may lack these columns)
+      if(existing){
+        var ek=existing.kpi||{};var nk=e.kpi||{};
+        if((ek.hp||0)>0&&(nk.hp||0)===0)nk.hp=ek.hp;
+        if((ek.fa||0)>0&&(nk.fa||0)===0)nk.fa=ek.fa;
+        e=Object.assign({},e,{kpi:Object.assign({},nk)});
+      }
+      eMap[e.id]=e;
+    }
   });
   var before=entries.length;
-  // CRITICAL dedup: after merging IDs, dedup by outletId+date+by so old-format and new-format
+  // CRITICAL dedup: after merging IDs, dedup by outletId+date+submitter so old-format and new-format
   // versions of the same visit don't both survive -> prevents double-counting in dashboard
+  // Key uses byEid (empid) if available so name vs empid differences don't create two entries
   var deduped={};
   Object.values(eMap).forEach(function(e){
-    var dk=(e.outletId||e.outletid||'')+'_'+(e.date||'')+'_'+(e.by||'');
-    if(!deduped[dk]||(e.at||0)>(deduped[dk].at||0))deduped[dk]=e;
+    var submitter=(e.byEid||e.by||'');
+    var dk=(e.outletId||e.outletid||'')+'_'+(e.date||'')+'_'+submitter;
+    if(!deduped[dk]||(e.at||0)>(deduped[dk].at||0)){
+      // If loser had non-zero hp/fa and winner has 0, patch winner
+      if(deduped[dk]){
+        var wk=e.kpi||{},lk=(deduped[dk].kpi||{});
+        if((lk.hp||0)>0&&(wk.hp||0)===0)wk.hp=lk.hp;
+        if((lk.fa||0)>0&&(wk.fa||0)===0)wk.fa=lk.fa;
+        e=Object.assign({},e,{kpi:Object.assign({},wk)});
+      }
+      deduped[dk]=e;
+    }
   });
   eMap={};Object.values(deduped).forEach(function(e){eMap[e.id]=e;});
   entries=Object.values(eMap);
