@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v118</title>
+<title>TAFE East Zone – CS Field Tool v119</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v118';
+    if(tsub)tsub.textContent='CS Field Tool v119';
   }catch(e){}
 
   // Step 3: Set dates
@@ -7223,6 +7223,11 @@ function mergeSheetEntries(newEntries,statusEl,mode){
     if(sheetConfirmedKeys[dk])return false; // Sheet confirmed a replacement; drop local
     return true; // Genuinely pending upload
   });
+  // Build a full original-entries lookup BEFORE localKeep filter so we can recover
+  // hp/fa from local even when that entry was excluded from localKeep (e.g. Sheet has
+  // same id already, so it was filtered at sheetIds[e.id] check above).
+  var origById={};
+  entries.forEach(function(e){origById[e.id]=e;});
   var eMap={};
   localKeep.forEach(function(e){eMap[e.id]=e;});
   // Apply Sheet entries (handle deletes too)
@@ -7231,10 +7236,14 @@ function mergeSheetEntries(newEntries,statusEl,mode){
     if(e._replaces)delete eMap[e._replaces];
     // Keep the entry with higher 'at' timestamp -- prevents blank row overwriting real data
     var existing=eMap[e.id];
+    // Also look in original entries in case this id was excluded from localKeep
+    var localOrig=origById[e.id];
     if(!existing||(e.at||0)>=(existing.at||0)){
-      // Preserve non-zero HP/FA from local if Sheet has 0 (Sheet may lack these columns)
-      if(existing){
-        var ek=existing.kpi||{};var nk=e.kpi||{};
+      // Preserve non-zero HP/FA from local if Sheet has 0 (Sheet may lack HP/FA columns
+      // or entry was just submitted and GAS hasn't stored HP/FA yet)
+      var localSrc=existing||localOrig; // prefer eMap version, fall back to original
+      if(localSrc){
+        var ek=localSrc.kpi||{};var nk=e.kpi||{};
         if((ek.hp||0)>0&&(nk.hp||0)===0)nk.hp=ek.hp;
         if((ek.fa||0)>0&&(nk.fa||0)===0)nk.fa=ek.fa;
         e=Object.assign({},e,{kpi:Object.assign({},nk)});
@@ -7243,22 +7252,39 @@ function mergeSheetEntries(newEntries,statusEl,mode){
     }
   });
   var before=entries.length;
-  // CRITICAL dedup: after merging IDs, dedup by outletId+date+submitter so old-format and new-format
-  // versions of the same visit don't both survive -> prevents double-counting in dashboard
-  // Key uses byEid (empid) if available so name vs empid differences don't create two entries
-  var deduped={};
+  // CRITICAL dedup: dedup by outletId+date+submitter so old-format and new-format
+  // versions of the same visit don't both survive -> prevents double-counting in dashboard.
+  // An entry may have byEid (empid) OR just by (name) so we build TWO keys per entry and
+  // check both when inserting so empid-keyed and name-keyed versions of the same visit merge.
+  var deduped={};  // slotKey -> entry
+  var aliasMap={}; // altKey -> slotKey (so name-key maps to same slot as empid-key)
+  function mergeHpFa(winner,loser){
+    var wk=winner.kpi||{},lk=loser.kpi||{};
+    var changed=false;
+    if((lk.hp||0)>0&&(wk.hp||0)===0){wk.hp=lk.hp;changed=true;}
+    if((lk.fa||0)>0&&(wk.fa||0)===0){wk.fa=lk.fa;changed=true;}
+    return changed?Object.assign({},winner,{kpi:Object.assign({},wk)}):winner;
+  }
   Object.values(eMap).forEach(function(e){
-    var submitter=(e.byEid||e.by||'');
-    var dk=(e.outletId||e.outletid||'')+'_'+(e.date||'')+'_'+submitter;
-    if(!deduped[dk]||(e.at||0)>(deduped[dk].at||0)){
-      // If loser had non-zero hp/fa and winner has 0, patch winner
-      if(deduped[dk]){
-        var wk=e.kpi||{},lk=(deduped[dk].kpi||{});
-        if((lk.hp||0)>0&&(wk.hp||0)===0)wk.hp=lk.hp;
-        if((lk.fa||0)>0&&(wk.fa||0)===0)wk.fa=lk.fa;
-        e=Object.assign({},e,{kpi:Object.assign({},wk)});
-      }
-      deduped[dk]=e;
+    var base=(e.outletId||e.outletid||'')+'_'+(e.date||'')+'_';
+    var dk1=base+(e.byEid||'');  // empid key
+    var dk2=base+(e.by||'');     // name/by key
+    // Look up existing slot via either key
+    var slotKey=aliasMap[dk1]||aliasMap[dk2]||
+                (deduped[dk1]?dk1:null)||(deduped[dk2]?dk2:null);
+    if(slotKey&&deduped[slotKey]){
+      // Slot exists -- keep higher-timestamp entry, preserve hp/fa from either
+      var cur=deduped[slotKey];
+      var winner=(e.at||0)>=(cur.at||0)?e:cur;
+      var loser=(e.at||0)>=(cur.at||0)?cur:e;
+      winner=mergeHpFa(winner,loser);
+      deduped[slotKey]=winner;
+    } else {
+      // New slot -- use empid key if available, else name key
+      var newKey=(e.byEid)?dk1:dk2;
+      deduped[newKey]=e;
+      // Register both keys as pointing to this slot
+      if(e.byEid&&dk1!==dk2){aliasMap[dk1]=newKey;aliasMap[dk2]=newKey;}
     }
   });
   eMap={};Object.values(deduped).forEach(function(e){eMap[e.id]=e;});
