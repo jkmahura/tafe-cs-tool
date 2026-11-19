@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v114</title>
+<title>TAFE East Zone – CS Field Tool v115</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2261,7 +2261,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v114';
+    if(tsub)tsub.textContent='CS Field Tool v115';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3030,16 +3030,16 @@ function renderMyView(){
       hdr='<tr style="'+HS2+'"><th '+NM2+'>Outlet</th>'+thg2('SERVICES',2,false)+'</tr>'+
           '<tr style="'+SS2+'"><th '+NS2+'>Dealer</th>'+thp2('SL',false)+'</tr>'; span=3;
     }else if(curMyTab==='state'||curMyTab==='rm'){
-      hdr='<tr style="'+HS2+'"><th '+NM2+'>Outlet</th>'+thg2('SERVICES',6,true)+thg2('REVENUE',2,true)+thg2('PRIMARY',6,true)+thg2('SECONDARY',6,true)+thg2('EW',2,true)+thg2('UC',2,false)+'</tr>'+
-          '<tr style="'+SS2+'"><th '+NS2+'>Name</th>'+thp2('SL',false)+thp2('FS',false)+thp2('MJ',true)+thp2('Rev',true)+thp2('P',false)+thp2('P.Parts',false)+thp2('P.Oil',true)+thp2('S',false)+thp2('S.Parts',false)+thp2('S.Oil',true)+thp2('EW',true)+thp2('UC',false)+'</tr>'; span=25;
+      hdr='<tr style="'+HS2+'"><th '+NM2+'>Outlet</th>'+thg2('SERVICES',6,true)+thg2('REVENUE',2,true)+thg2('PRIMARY',6,true)+thg2('SECONDARY',6,true)+thg2('EW',2,true)+thg2('UC',2,true)+thg2('HP',2,true)+thg2('FA',2,false)+'</tr>'+
+          '<tr style="'+SS2+'"><th '+NS2+'>Name</th>'+thp2('SL',false)+thp2('FS',false)+thp2('MJ',true)+thp2('Rev',true)+thp2('P',false)+thp2('P.Parts',false)+thp2('P.Oil',true)+thp2('S',false)+thp2('S.Parts',false)+thp2('S.Oil',true)+thp2('EW',true)+thp2('UC',true)+thp2('HP',true)+thp2('FA',false)+'</tr>'; span=33;
     }else if(curMyTab==='km'){
       hdr='<tr style="'+HS2+'"><th '+NM2+'>KPDM View</th>'+thg2('PRIMARY TOTAL',2,false)+thg2('BREAKDOWN',4,false)+'</tr>'+
           '<tr style="'+SS2+'"><th '+NS2+'>Outlet</th>'+thp2('P',false)+thp2('P.Oil',false)+thp2('P.Parts',false)+'</tr>'; span=7;
     }else{
       var isDrMy=(curMyTab==='direct');
-      hdr='<tr style="'+HS2+'"><th '+NM2+'>Outlet</th>'+thg2('SERVICES',6,true)+thg2('REVENUE',2,true)+(isDrMy?thg2('PRIMARY',6,true):'')+thg2('SECONDARY',6,true)+thg2('EW',2,true)+thg2('UC',2,false)+'</tr>'+
-          '<tr style="'+SS2+'"><th '+NS2+'>Dealer</th>'+thp2('SL',false)+thp2('FS',false)+thp2('MJ',true)+thp2('Rev',true)+(isDrMy?thp2('P',false)+thp2('P.Parts',false)+thp2('P.Oil',true):'')+thp2('S',false)+thp2('S.Parts',false)+thp2('S.Oil',true)+thp2('EW',true)+thp2('UC',false)+'</tr>';
-      span=isDrMy?25:19;
+      hdr='<tr style="'+HS2+'"><th '+NM2+'>Outlet</th>'+thg2('SERVICES',6,true)+thg2('REVENUE',2,true)+(isDrMy?thg2('PRIMARY',6,true):'')+thg2('SECONDARY',6,true)+thg2('EW',2,true)+thg2('UC',2,true)+thg2('HP',2,true)+thg2('FA',2,false)+'</tr>'+
+          '<tr style="'+SS2+'"><th '+NS2+'>Dealer</th>'+thp2('SL',false)+thp2('FS',false)+thp2('MJ',true)+thp2('Rev',true)+(isDrMy?thp2('P',false)+thp2('P.Parts',false)+thp2('P.Oil',true):'')+thp2('S',false)+thp2('S.Parts',false)+thp2('S.Oil',true)+thp2('EW',true)+thp2('UC',true)+thp2('HP',true)+thp2('FA',false)+'</tr>';
+      span=isDrMy?33:27;
     }
         return'<div class="card" style="padding:0"><div class="stbl-wrap">'+
       '<table><thead>'+hdr+'</thead><tbody>'+
@@ -3107,7 +3107,7 @@ function getTarget(lvl,entityId,mon,yr){
 // Aggregate targets for all dealers matching a filter function
 // Used for State, RM, AM, SE rows where no direct target row exists
 function getTargetSum(dealerFilterFn, mon, yr){
-  var tot={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,mpreq:0,_hasData:false};
+  var tot={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,hp:0,fa:0,mpreq:0,_hasData:false};
   dealers.filter(dealerFilterFn).forEach(function(d){
     var lvl=d.isKPD?'kpd':d.isDirect?'direct':'dealer';
     var t=getTarget(lvl,d.id,mon,yr)||getTarget(lvl,d.code,mon,yr)
@@ -3117,6 +3117,8 @@ function getTargetSum(dealerFilterFn, mon, yr){
     tot.poil+=t.poil||0; tot.pparts+=t.pparts||0;
     tot.soil+=t.soil||0; tot.sparts+=t.sparts||0;
     tot.ew+=t.ew||0; tot.uc+=t.uc||0; tot.mpreq+=t.mpreq||0;
+    tot.hp+=(t.hp!=null?t.hp:t.activity)||0;
+    tot.fa+=(t.fa!=null?t.fa:t.referral)||0;
     tot._hasData=true;
   });
   return tot._hasData?tot:null;
