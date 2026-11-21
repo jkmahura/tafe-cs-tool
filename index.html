@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v122</title>
+<title>TAFE East Zone – CS Field Tool v123</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v122';
+    if(tsub)tsub.textContent='CS Field Tool v123';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3081,39 +3081,25 @@ function getME(mon,yr){
   });
 }
 function agg(arr){
-  // KPIs are MTD cumulative — take the LATEST entry per outlet per DATE, then:
-  //   - For MTD cumulative KPIs (SL, FS, MJ, Rev, Oils, Parts, EW, UC, SMS, Ret, VIF):
-  //       take the LATEST DATE per outlet (last visit = current running total)
-  //   - For per-visit count KPIs (HP, FA):
-  //       SUM across ALL visit dates for the outlet (each visit may identify new prospects/activities)
+  // KPIs are MTD cumulative — take the LATEST entry per outlet (not sum across dates)
   // Step 1: deduplicate same outlet+date, keep latest timestamp
   var latestByDate={};
   arr.forEach(function(e){
     var key=(e.outletId||'')+'|'+(e.date||'');
     if(!latestByDate[key]||((e.at||0)>(latestByDate[key].at||0)))latestByDate[key]=e;
   });
-  var allDates=Object.values(latestByDate);
-  // Step 2a: per outlet, keep only the latest DATE entry for MTD cumulative KPIs
+  // Step 2: per outlet, keep only the entry with the latest DATE (MTD cumulative = last visit = current total)
   var latestByOutlet={};
-  allDates.forEach(function(e){
+  Object.keys(latestByDate).forEach(function(k){
+    var e=latestByDate[k];
     var oid=e.outletId||'';
     if(!latestByOutlet[oid]||(e.date||'')>(latestByOutlet[oid].date||'')||
        ((e.date||'')===(latestByOutlet[oid].date||'')&&(e.at||0)>(latestByOutlet[oid].at||0)))
       latestByOutlet[oid]=e;
   });
-  var deduped=Object.values(latestByOutlet);
-  // Step 2b: for HP/FA, sum ALL visit-date entries per outlet (not just latest)
-  var hpByOutlet={},faByOutlet={};
-  allDates.forEach(function(e){
-    var oid=e.outletId||'';var k=e.kpi||{};
-    hpByOutlet[oid]=(hpByOutlet[oid]||0)+(k.hp||0);
-    faByOutlet[oid]=(faByOutlet[oid]||0)+(k.fa||0);
-  });
+  var deduped=Object.keys(latestByOutlet).map(function(k){return latestByOutlet[k];});
   var r={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,hp:0,fa:0};
-  deduped.forEach(function(e){var k=e.kpi||{};r.sl+=k.sl||0;r.fs+=k.fs||0;r.mj+=k.mj||0;r.rev+=k.rev||0;r.poil+=k.poil||0;r.pparts+=k.pparts||0;r.soil+=k.soil||0;r.sparts+=k.sparts||0;r.ew+=k.ew||0;r.uc+=k.uc||0;});
-  // HP/FA: sum across all outlets (each outlet's total is sum of all visit-date entries)
-  Object.keys(hpByOutlet).forEach(function(oid){r.hp+=hpByOutlet[oid]||0;});
-  Object.keys(faByOutlet).forEach(function(oid){r.fa+=faByOutlet[oid]||0;});
+  deduped.forEach(function(e){var k=e.kpi||{};r.sl+=k.sl||0;r.fs+=k.fs||0;r.mj+=k.mj||0;r.rev+=k.rev||0;r.poil+=k.poil||0;r.pparts+=k.pparts||0;r.soil+=k.soil||0;r.sparts+=k.sparts||0;r.ew+=k.ew||0;r.uc+=k.uc||0;r.hp+=k.hp||0;r.fa+=k.fa||0;});
   return r;
 }
 function getDealerTotal(dealerId,mon,yr){
@@ -3931,22 +3917,14 @@ async function submitOpeningStock(){
   });
   saveOpeningStock(arr);
   refreshOSCard();
-  // Push to Google Sheet
+  // Push to Google Sheet — use iframe form GET (same as entries) so it works on Android Chrome
+  // fetch POST fails on Android because GAS returns a redirect that fetch can't follow cross-origin
   var osRec=arr[arr.length-1];
   if(GSURL){
-    (async function(){
-      try{
-        var fd=new FormData();
-        fd.append('action','openstock');
-        fd.append('payload',JSON.stringify(osRec));
-        var r=await fetch(GSURL,{method:'POST',body:fd});
-        var j=await r.json();
-        if(j.status==='ok'){toast('✅ Opening stock saved & synced to Sheet');}
-        else{toast('✅ Saved locally (Sheet sync failed — will retry on next submit)');}
-      }catch(ex){toast('✅ Saved locally (offline — will sync later)');}
-    })();
+    postToGoogleSheet(Object.assign({action:'openstock'},osRec));
+    toast('✅ Opening stock saved & sent to Sheet');
   } else {
-    toast('✅ Opening stock saved');
+    toast('✅ Opening stock saved locally');
   }
 }
 
