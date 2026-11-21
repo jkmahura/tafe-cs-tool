@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v124</title>
+<title>TAFE East Zone – CS Field Tool v125</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v124';
+    if(tsub)tsub.textContent='CS Field Tool v125';
   }catch(e){}
 
   // Step 3: Set dates
@@ -6879,8 +6879,12 @@ function pullFromSheet(){
         if(statusEl)statusEl.innerHTML='<span style="color:var(--amber)">⚠ No entries in Sheet yet.</span>';
         return;
       }
+      // Debug: show raw HP/FA sum from GAS response before merge
+      var rawHp=newEntries.reduce(function(s,e){return s+((e.kpi&&e.kpi.hp)||0);},0);
+      var rawFa=newEntries.reduce(function(s,e){return s+((e.kpi&&e.kpi.fa)||0);},0);
+      if(rawHp===0&&rawFa===0){toast('⚠ GAS returned HP=0 FA=0 for all entries — redeploy GAS needed');}
       var count=mergeSheetEntries(newEntries,statusEl,'manual');
-      var msg='✅ '+newEntries.length+' entries'+(osArr.length?' + '+osArr.length+' OS records':'')+' from Sheet. Dashboard updated.';
+      var msg='✅ '+newEntries.length+' entries'+(osArr.length?' + '+osArr.length+' OS records':'')+' from Sheet. Dashboard updated. (Raw HP='+rawHp+' FA='+rawFa+')';
       if(statusEl)statusEl.innerHTML='<span style="color:var(--green)">'+msg+'</span>';
       toast(msg);
       setTimeout(function(){if(statusEl)statusEl.innerHTML='';},5000);
