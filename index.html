@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v123</title>
+<title>TAFE East Zone – CS Field Tool v124</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v123';
+    if(tsub)tsub.textContent='CS Field Tool v124';
   }catch(e){}
 
   // Step 3: Set dates
@@ -7259,11 +7259,16 @@ function mergeSheetEntries(newEntries,statusEl,mode){
     var existing=eMap[e.id];
     // Also look in original entries in case this id was excluded from localKeep
     var localOrig=origById[e.id];
-    if(!existing||(e.at||0)>=(existing.at||0)){
+    // For entries belonging to OTHER users (not current user), Sheet is always authoritative —
+    // ZM/RM can only have these from prior Sheet pulls, so always take the latest Sheet version.
+    // For current user's own entries, use at-timestamp comparison to avoid overwriting pending uploads.
+    var isOtherUser=(function(){var ek2=e.byEid||e.byKey||'';var en2=e.by||e.byName||'';return ek2&&ek2!==myKey&&en2!==myName||((!ek2)&&en2!==myName);})();
+    if(!existing||isOtherUser||(e.at||0)>=(existing.at||0)){
       // Preserve non-zero HP/FA from local if Sheet has 0 (Sheet may lack HP/FA columns
       // or entry was just submitted and GAS hasn't stored HP/FA yet)
       var localSrc=existing||localOrig; // prefer eMap version, fall back to original
-      if(localSrc){
+      if(localSrc&&!isOtherUser){
+        // Only rescue HP/FA from local for OWN entries — other users' HP/FA must come from Sheet
         var ek=localSrc.kpi||{};var nk=e.kpi||{};
         if((ek.hp||0)>0&&(nk.hp||0)===0)nk.hp=ek.hp;
         if((ek.fa||0)>0&&(nk.fa||0)===0)nk.fa=ek.fa;
