@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v120</title>
+<title>TAFE East Zone – CS Field Tool v121</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v120';
+    if(tsub)tsub.textContent='CS Field Tool v121';
   }catch(e){}
 
   // Step 3: Set dates
@@ -6112,12 +6112,22 @@ function postToGoogleSheet(data){
 }
 
 function getPendingEntries(){
-  // Local entries whose id is NOT confirmed in gs_tombstones (gs_-prefixed = came from sheet = confirmed)
+  // An entry is confirmed (no need to resend) if the Sheet returned it in a pull.
+  // gs_sheet_confirmed tracks IDs the Sheet has acknowledged via json pull.
+  // NOTE: do NOT use id.startsWith('gs_') — all new entries use gs_ IDs locally
+  // before they reach the Sheet, so that check would wrongly treat all new entries as confirmed.
   var tombstones=JSON.parse(localStorage.getItem('gs_tombstones')||'{}');
+  var confirmed={};
+  try{confirmed=JSON.parse(localStorage.getItem('gs_sheet_confirmed')||'{}');}catch(ex){}
+  var myKey=(CU&&(CU.empid||CU.name))||'';
+  var myName=CU&&CU.name;
   return entries.filter(function(e){
     if(!e.id)return false;
     if(tombstones[e.id])return false;
-    if(e.id.startsWith('gs_'))return false; // came from sheet — already confirmed
+    if(confirmed[e.id])return false; // Sheet has confirmed this entry in a pull
+    // Only resend entries belonging to this user (can't resend others' entries)
+    var eKey=e.byEid||e.by||'';
+    if(!(eKey===myKey||e.by===myName||e.byName===myName))return false;
     return true;
   });
 }
@@ -7312,17 +7322,27 @@ function mergeSheetEntries(newEntries,statusEl,mode){
   // Re-POST local entries not yet seen in Sheet -- max 3 attempts to prevent spam
   // gs_sent_log stores send COUNT (not timestamp) per entry id
   var sentLog=JSON.parse(localStorage.getItem('gs_sent_log')||'{}');
-  // Also build a Sheet-confirmed set by outletId+date+submitter to catch old-format IDs
+  // Build Sheet-confirmed set and persist — IDs that Sheet returned in this pull are confirmed
   var sheetConfirmed={};
+  try{sheetConfirmed=JSON.parse(localStorage.getItem('gs_sheet_confirmed')||'{}');}catch(ex){}
   newEntries.forEach(function(e){
     var dk=(e.outletId||e.outletid||'')+'_'+(e.date||'')+'_'+(e.byEid||e.by||'');
     sheetConfirmed[dk]=true;
     sheetConfirmed[e.id]=true; // also confirm by exact id
   });
-  var toResend=localKeep.filter(function(e){
-    var sendCount=sentLog[e.id]||0;
-    if(sendCount>=99)return false; // confirmed received (=99 means GAS acknowledged)
-    // Skip if Sheet already has a matching entry (same outlet+date+user, even if id differs)
+  try{localStorage.setItem('gs_sheet_confirmed',JSON.stringify(sheetConfirmed));}catch(ex){}
+  // Find ALL user entries not yet confirmed by Sheet (includes new gs_-prefixed entries
+  // that were sent but Sheet hasn't returned them in a pull yet)
+  var myKeyM=(CU&&(CU.empid||CU.name))||'';
+  var myNameM=CU&&CU.name;
+  var tombstonesM={};try{tombstonesM=JSON.parse(localStorage.getItem('gs_tombstones')||'{}');}catch(ex){}
+  var toResend=entries.filter(function(e){
+    if(!e.id)return false;
+    if(tombstonesM[e.id])return false;
+    // Only resend this user's entries
+    var eKey=e.byEid||e.by||'';
+    if(!(eKey===myKeyM||e.by===myNameM||e.byName===myNameM))return false;
+    // Already confirmed by Sheet
     var dk=(e.outletId||e.outletid||'')+'_'+(e.date||'')+'_'+(e.byEid||e.by||'');
     if(sheetConfirmed[dk]||sheetConfirmed[e.id])return false;
     return true;
