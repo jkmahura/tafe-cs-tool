@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v128</title>
+<title>TAFE East Zone – CS Field Tool v129</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v128';
+    if(tsub)tsub.textContent='CS Field Tool v129';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3021,16 +3021,18 @@ function renderMyView(){
   }
   document.getElementById('my-body').innerHTML=(function(){
     var isKPD=(curMyTab==='kpd');
-    var totA={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0};
-    var totT={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0};
+    var totA={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,hp:0,fa:0};
+    var totT={sl:0,fs:0,mj:0,rev:0,poil:0,pparts:0,soil:0,sparts:0,ew:0,uc:0,hp:0,fa:0};
     var bodyRows=rows.map(function(r,ri){
       var a=r.a,t=r.t||{};
       totA.sl+=a.sl||0;totA.fs+=a.fs||0;totA.mj+=a.mj||0;totA.rev+=a.rev||0;
       totA.poil+=a.poil||0;totA.pparts+=a.pparts||0;
       totA.soil+=a.soil||0;totA.sparts+=a.sparts||0;totA.ew+=a.ew||0;totA.uc+=a.uc||0;
+      totA.hp+=a.hp||0;totA.fa+=a.fa||0;
       totT.sl+=t.sl||0;totT.fs+=t.fs||0;totT.mj+=t.mj||0;totT.rev+=t.rev||0;
       totT.poil+=t.poil||0;totT.pparts+=t.pparts||0;
       totT.soil+=t.soil||0;totT.sparts+=t.sparts||0;totT.ew+=t.ew||0;totT.uc+=t.uc||0;
+      totT.hp+=t.hp||0;totT.fa+=t.fa||0;
       var bg=ri%2?'#f7f9ff':'#fff';
       return tvaRows(r.k,a,t,curMyTab,bg);
     });
