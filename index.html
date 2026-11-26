@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v129</title>
+<title>TAFE East Zone – CS Field Tool v130</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v129';
+    if(tsub)tsub.textContent='CS Field Tool v130';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3473,8 +3473,8 @@ async function submitEntry(){
       if(n('kpi-sparts')<(prev.sparts||0))decreases.push('S.Parts: was '+fl(prev.sparts||0)+', now '+fl(n('kpi-sparts')));
       if(n('kpi-ew')<(prev.ew||0))decreases.push('EW: was '+(prev.ew||0)+', now '+n('kpi-ew'));
       if(decreases.length){
-        toast('❌ Values cannot decrease from previous entry ('+prevE[0].date+'). Decreases: '+decreases.join(', ')+'. Contact your RM for correction.');
-        return;
+        var ok=await showConfirm('⚠️ Values are lower than previous entry ('+prevE[0].date+'):\n'+decreases.join('\n')+'\n\nKPI values are cumulative — they should only increase. Submit anyway (correction)?');
+        if(!ok)return;
       }
     }
   }
