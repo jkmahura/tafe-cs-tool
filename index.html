@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v130</title>
+<title>TAFE East Zone – CS Field Tool v131</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v130';
+    if(tsub)tsub.textContent='CS Field Tool v131';
   }catch(e){}
 
   // Step 3: Set dates
@@ -7245,10 +7245,12 @@ function mergeSheetEntries(newEntries,statusEl,mode){
     if(!(eKey===myKey||e.by===myName))return false;
     if(sheetIds[e.id])return false; // Sheet has it, will be merged below
     // If this entry is for a date where Sheet has OTHER entries for same outlet+submitter,
-    // it means this local copy was superseded/deleted on Sheet — drop it
+    // it means this local copy was superseded/deleted on Sheet — drop it.
+    // EXCEPTION: never drop today's entries this way — if the GAS write is still in-flight,
+    // the Sheet won't have the new entry yet and we must keep it locally until Sheet confirms it.
     var dk=(e.outletId||'')+'_'+(e.date||'')+'_'+(e.byEid||e.by||'');
-    if(sheetConfirmedKeys[dk])return false; // Sheet confirmed a replacement; drop local
-    return true; // Genuinely pending upload
+    if(sheetConfirmedKeys[dk]&&e.date!==today)return false; // Sheet confirmed a replacement for a past date — drop local
+    return true; // Genuinely pending upload (or today's fresh entry — always keep)
   });
   // Build a full original-entries lookup BEFORE localKeep filter so we can recover
   // hp/fa from local even when that entry was excluded from localKeep (e.g. Sheet has
