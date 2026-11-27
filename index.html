@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v131</title>
+<title>TAFE East Zone – CS Field Tool v132</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v131';
+    if(tsub)tsub.textContent='CS Field Tool v132';
   }catch(e){}
 
   // Step 3: Set dates
@@ -5619,12 +5619,23 @@ function _seCompGetData(mon,yr){
   // IMPORTANT: use agg() deduplication per dealer (same as dashboard) so MTD cumulative entries
   // are not double-counted. agg() keeps only the latest entry per outlet (latest date, then latest
   // timestamp) which is the correct MTD running total — summing all entries inflates numbers.
+  //
+  // For Contest scoring consistency: only count Sheet-confirmed entries (gs_sheet_confirmed).
+  // This ensures every device shows the same leaderboard regardless of local pending entries.
+  var sheetConfirmedSet={};
+  try{sheetConfirmedSet=JSON.parse(localStorage.getItem('gs_sheet_confirmed')||'{}');}catch(ex){}
+  var contestEntries=entries.filter(function(e){
+    // Include if Sheet has confirmed this entry by ID or by outletId+date+submitter key
+    if(sheetConfirmedSet[e.id])return true;
+    var dk=(e.outletId||'')+'_'+(e.date||'')+'_'+(e.byEid||e.by||'');
+    return sheetConfirmedSet[dk];
+  });
   var seAct={};
   seList.forEach(function(se){seAct[se]={sl:0,rev:0,soil:0,sparts:0,ew:0,hp:0,fa:0,visits:0};});
   // Group entries by SE → by outlet, then apply agg() per SE's outlets
   var seEntries={};
   seList.forEach(function(se){seEntries[se]=[];});
-  entries.forEach(function(e){
+  contestEntries.forEach(function(e){
     if(e.month!==mon)return;
     var se=e.se||e.byName||e.by||'';
     if(!se||!seEntries[se])return;
@@ -5741,6 +5752,7 @@ function renderSECompetition(mon,yr){
     '<th style="padding:6px 6px;text-align:center">🎪FA<br><span style="opacity:.7">25pt</span></th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
     (ranked.length?'<div style="margin-top:6px;font-size:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:6px 10px;color:#1e40af">📅 MTD Target = Monthly Target × ('+ranked[0].mtdDays+' days elapsed ÷ '+ranked[0].daysInMon+' days in month) = <strong>'+ranked[0].mtdPct+'%</strong> of monthly target used as benchmark</div>':'')+
+    '<div style="margin-top:6px;font-size:10px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;color:#78350f">🔄 Scores are based on <strong>Sheet-confirmed entries only</strong>. Tap <strong>Refresh from Sheet</strong> before viewing for the latest rankings — all users will then see the same leaderboard.</div>'+
     '<div style="margin-top:8px;font-size:10px;color:#9ca3af;line-height:1.6">'+
     '• SL / Rev / Sec.Offtake / EW: score = (MTD actual ÷ MTD target) × weight, capped at weight<br>'+
     '• HP / FA: target-based when targets provided in sheet; else relative to zone best performer<br>'+
