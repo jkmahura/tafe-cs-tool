@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v132</title>
+<title>TAFE East Zone – CS Field Tool v133</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v132';
+    if(tsub)tsub.textContent='CS Field Tool v133';
   }catch(e){}
 
   // Step 3: Set dates
@@ -2433,6 +2433,16 @@ function loadAll(){
   var usingSample=!rawDealers.length&&!wasCleared;
   hier=dbLoad('hier',200);  // Load hier FIRST so canonName works
   dealers=usingSample?sampleDealers().map(function(d){d._isSample=true;return d;}):rawDealers;
+  // Merge MASTER_DEALERS into localStorage-loaded list so newly added dealers always appear,
+  // even on devices that have an older cached dealer list from a previous Sync File import.
+  if(!usingSample){
+    var existingIds={};dealers.forEach(function(d){existingIds[d.id]=true;});
+    var added=0;
+    MASTER_DEALERS.forEach(function(md){
+      if(!existingIds[md.id]){dealers.push(md);existingIds[md.id]=true;added++;}
+    });
+    if(added){ls('dealers',dealers.reduce(function(o,d){o[d.id]=d;return o;},{}));}
+  }
   // Normalize existing dealer RM/AM/SE names against hierarchy (fixes case mismatches in stored data)
   if(!usingSample&&hier.length){
     var hMap=buildHierNameMap();
