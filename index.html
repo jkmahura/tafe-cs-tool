@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v133</title>
+<title>TAFE East Zone – CS Field Tool v134</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -561,7 +561,7 @@ tr:last-child td{border-bottom:none}
     </div></div>
   </div>
   <div class="card">
-    <div class="ch" style="background:#fff3cd;color:#856404">🔴 Pending After 5:30 PM</div>
+    <div class="ch" style="background:#fff3cd;color:#856404">🔴 Pending</div>
     <div class="cb" id="pending-list"></div>
   </div>
   <div class="card">
@@ -1942,7 +1942,7 @@ function injectMasterData(){
 }
 
 // -- CONSTANTS --------------------------------------------
-var CUTOFF_HOUR=17, CUTOFF_MIN=30; // 5:30 PM alert cutoff (alerts only -- submission always allowed)
+var CUTOFF_HOUR=23, CUTOFF_MIN=59; // No cutoff -- SE can submit at any time (threshold removed)
 
 // -- UTILITY FUNCTIONS ------------------------------------
 function fl(n){return (Math.round((parseFloat(n)||0)*10)/10).toFixed(1);}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v133';
+    if(tsub)tsub.textContent='CS Field Tool v134';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3452,8 +3452,7 @@ function checkEntryAlert(){
   var now=new Date();var past=(now.getHours()>CUTOFF_HOUR)||(now.getHours()===CUTOFF_HOUR&&now.getMinutes()>=CUTOFF_MIN);
   var td=todayStr();var myE=entries.filter(function(e){return e.date===td&&e.by===CU.name;});
   var el=document.getElementById('entry-alert');if(!el)return;
-  if(past&&!myE.length){el.className='alert-banner red';el.innerHTML='⚠ Past 5:30 PM -- daily update not submitted yet.';}
-  else if(myE.length){el.className='alert-banner ok';el.innerHTML='✅ You have submitted '+myE.length+' update(s) today.';}
+  if(myE.length){el.className='alert-banner ok';el.innerHTML='✅ You have submitted '+myE.length+' update(s) today.';}
   else el.className='';
 }
 async function submitEntry(){
@@ -3473,7 +3472,8 @@ async function submitEntry(){
     if(vFS+vMJ>vSL){toast('❌ FS ('+vFS+') + MJ ('+vMJ+') = '+(vFS+vMJ)+' exceeds SL ('+vSL+'). Please correct.');return;}
     // Cumulative check: KPI values cannot decrease from previous entry for SAME outlet AND SAME month
     // (mon/yr already computed above from the selected date)
-    var prevE=entries.filter(function(e){return e.outletId===oid&&e.date<date&&e.isFinal!==false&&e.month===mon&&e.year===yr;}).sort(function(a,b){return b.date.localeCompare(a.date)||b.at-a.at;});
+    var editId0=v('entry-edit-id'); // exclude the entry being edited from the cumulative check
+    var prevE=entries.filter(function(e){return e.outletId===oid&&e.date<date&&e.isFinal!==false&&e.month===mon&&e.year===yr&&e.id!==editId0;}).sort(function(a,b){return b.date.localeCompare(a.date)||b.at-a.at;});
     if(prevE.length){
       var prev=prevE[0].kpi||{};
       var decreases=[];
@@ -4209,7 +4209,7 @@ function escHtml(s){
 function renderStatus(){
   var today=todayStr();var now=new Date();
   var past=(now.getHours()>CUTOFF_HOUR)||(now.getHours()===CUTOFF_HOUR&&now.getMinutes()>=CUTOFF_MIN);
-  document.getElementById('status-sub').textContent='As of '+now.toLocaleTimeString()+' | Alert cutoff: 5:30 PM (submission open all day)';
+  document.getElementById('status-sub').textContent='As of '+now.toLocaleTimeString();
   document.getElementById('status-date').textContent=today;
   var stFilter=v('st-state');
   var ses=[];
@@ -4293,7 +4293,7 @@ function renderStatus(){
   var pendingList=rows.filter(function(r){return !r.isToday&&!r.inactive;});
   document.getElementById('pending-list').innerHTML=past&&pendingList.length?
     pendingList.map(function(r){return'<div style="padding:5px 0;border-bottom:1px solid var(--border)">⚠ <strong>'+r.name+'</strong> -- Last: '+r.lastTime+'</div>';}).join(''):
-    '<div style="color:var(--sub);font-size:13px">'+(past?'All active staff up to date ✅':'Alert activates after 5:30 PM')+'</div>';
+    '<div style="color:var(--sub);font-size:13px">'+(past?'All active staff up to date ✅':'Pending submissions')+'</div>';
   // RM Correction Panel visibility
   var rmPanel=document.getElementById('rm-correction-panel');
   if(rmPanel){
