@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TAFE East Zone – CS Field Tool v135</title>
+<title>TAFE East Zone – CS Field Tool v136</title>
 <style>
 :root{--navy:#1F3864;--orange:#C55A11;--green:#1a7f37;--red:#cc2200;--amber:#d4a017;--blue:#2563eb;--sub:#6b7280;--border:#e5e7eb;--light:#f8f9fb;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -2284,7 +2284,7 @@ function showApp(){
     var upill=document.getElementById('upill');
     if(upill)upill.textContent=role+' . '+name.split(' ')[0];
     var tsub=document.getElementById('top-sub');
-    if(tsub)tsub.textContent='CS Field Tool v135';
+    if(tsub)tsub.textContent='CS Field Tool v136';
   }catch(e){}
 
   // Step 3: Set dates
@@ -3472,23 +3472,29 @@ async function submitEntry(){
     if(vFS+vMJ>vSL){toast('❌ FS ('+vFS+') + MJ ('+vMJ+') = '+(vFS+vMJ)+' exceeds SL ('+vSL+'). Please correct.');return;}
     // Cumulative check: KPI values cannot decrease from previous entry for SAME outlet AND SAME month
     // (mon/yr already computed above from the selected date)
-    // Cumulative decrease check -- only for FRESH entries, not edits/corrections.
-    // When editing, SE may legitimately correct a value downward (data entry mistake).
-    // Blocking or warning on edit would prevent valid corrections.
+    // Cumulative decrease check: today's entry (fresh or edited) cannot be lower than
+    // the previous day's final entry. SE gets a hard block -- only RM/ZM can correct past entries.
+    var effRoleChk=actingAs?actingAs.role:(CU&&CU.role);
+    var isRMOrAbove=(effRoleChk==='RM'||effRoleChk==='ZM'||effRoleChk==='KM'||effRoleChk==='AM');
     var editId0=v('entry-edit-id');
-    if(!editId0){
-      var prevE=entries.filter(function(e){return e.outletId===oid&&e.date<date&&e.isFinal!==false&&e.month===mon&&e.year===yr;}).sort(function(a,b){return b.date.localeCompare(a.date)||b.at-a.at;});
-      if(prevE.length){
-        var prev=prevE[0].kpi||{};
-        var decreases=[];
-        if(vSL<(prev.sl||0))decreases.push('SL: was '+(prev.sl||0)+', now '+vSL);
-        if(n('kpi-rev')<(prev.rev||0))decreases.push('Rev: was '+(prev.rev||0)+', now '+fl(n('kpi-rev')));
-        if(n('kpi-soil')<(prev.soil||0))decreases.push('S.Oil: was '+fl(prev.soil||0)+', now '+fl(n('kpi-soil')));
-        if(n('kpi-sparts')<(prev.sparts||0))decreases.push('S.Parts: was '+fl(prev.sparts||0)+', now '+fl(n('kpi-sparts')));
-        if(n('kpi-ew')<(prev.ew||0))decreases.push('EW: was '+(prev.ew||0)+', now '+n('kpi-ew'));
-        if(decreases.length){
-          var ok=await showConfirm('⚠️ Values are lower than previous entry ('+prevE[0].date+'):\n'+decreases.join('\n')+'\n\nKPI values are cumulative — they should only increase. Submit anyway (correction)?');
+    var prevE=entries.filter(function(e){return e.outletId===oid&&e.date<date&&e.isFinal!==false&&e.month===mon&&e.year===yr;}).sort(function(a,b){return b.date.localeCompare(a.date)||b.at-a.at;});
+    if(prevE.length){
+      var prev=prevE[0].kpi||{};
+      var decreases=[];
+      if(vSL<(prev.sl||0))decreases.push('SL: was '+(prev.sl||0)+', now '+vSL);
+      if(n('kpi-rev')<(prev.rev||0))decreases.push('Rev: was '+(prev.rev||0)+', now '+fl(n('kpi-rev')));
+      if(n('kpi-soil')<(prev.soil||0))decreases.push('S.Oil: was '+fl(prev.soil||0)+', now '+fl(n('kpi-soil')));
+      if(n('kpi-sparts')<(prev.sparts||0))decreases.push('S.Parts: was '+fl(prev.sparts||0)+', now '+fl(n('kpi-sparts')));
+      if(n('kpi-ew')<(prev.ew||0))decreases.push('EW: was '+(prev.ew||0)+', now '+n('kpi-ew'));
+      if(decreases.length){
+        if(isRMOrAbove){
+          // RM/ZM can override with confirmation
+          var ok=await showConfirm('⚠️ Values are lower than previous entry ('+prevE[0].date+'):\n'+decreases.join('\n')+'\n\nKPI values are cumulative. Submit anyway as RM correction?');
           if(!ok)return;
+        } else {
+          // SE gets a hard block -- contact RM to correct previous day entries
+          toast('❌ Cannot submit: values are lower than previous entry ('+prevE[0].date+'). '+decreases.join(', ')+'. Contact your RM to correct if needed.',6000);
+          return;
         }
       }
     }
